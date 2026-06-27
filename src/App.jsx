@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import Controls from './components/Controls'
 import CanvasPreview from './components/CanvasPreview'
 import { defaultFamily, defaultFriends } from './utils/gridLayouts'
+import { Menu, X } from 'lucide-react'
 
 function initialConfig() {
   return {
@@ -38,6 +39,13 @@ function initialConfig() {
 }
 
 export default function App() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768
+    }
+    return true
+  })
+
   const [bgImage, setBgImage] = useState(() => {
     try {
       const saved = localStorage.getItem('bgImage')
@@ -122,12 +130,42 @@ export default function App() {
   }, [avatars])
 
   return (
-    <div className="flex h-screen w-full bg-ink overflow-hidden">
-      <div className="w-[420px] shrink-0 h-full bg-ink border-r border-line overflow-y-auto sidebar-scroll p-5">
+    <div className="flex h-screen w-full bg-ink overflow-hidden relative">
+      {/* Mobile backdrop */}
+      {isSidebarOpen && (
+        <div
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 bg-black/60 z-20 md:hidden transition-opacity"
+        />
+      )}
+
+      {/* Sidebar wrapper */}
+      <div
+        className={`fixed md:relative top-0 left-0 h-full shrink-0 bg-ink sidebar-scroll transition-all duration-300 z-30
+          ${isSidebarOpen 
+            ? 'w-[320px] md:w-[420px] border-r border-line p-5 translate-x-0 opacity-100 overflow-y-auto' 
+            : 'w-0 p-0 border-r-0 translate-x-full opacity-0 overflow-hidden pointer-events-none md:translate-x-0 md:w-0 md:p-0 md:border-r-0 md:opacity-0 md:pointer-events-none'
+          }
+        `}
+      >
+        <button className="md:hidden absolute top-6 right-6 text-gray-400 hover:text-white z-50" onClick={() => setIsSidebarOpen(false)}><X size={24} /></button>
         <Controls config={config} setConfig={setConfig} />
       </div>
-      <div className="flex-1 h-full p-6">
-        <CanvasPreview config={config} />
+
+      {/* Main Content Area */}
+      <div className="flex-1 h-full p-6 relative overflow-hidden flex flex-col transition-all duration-300">
+        {/* Floating toggle button */}
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className={`absolute top-6 left-6 z-40 p-2.5 rounded-lg bg-panel hover:bg-panel2 border border-line text-gray-200 hover:text-white shadow-lg transition-all focus:outline-none animate-fade-in ${isSidebarOpen ? 'hidden md:block' : 'block'}`}
+          title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+        >
+          {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+
+        <div className="flex-1 h-full pt-12">
+          <CanvasPreview config={config} />
+        </div>
       </div>
     </div>
   )

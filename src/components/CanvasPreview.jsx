@@ -16,20 +16,35 @@ export default function CanvasPreview({ config }) {
   const layout = computeLayout(config)
   const { canvasWidth, canvasHeight } = layout
 
-  // Keep the on-screen preview scaled to fit its container, while the
-  // Stage itself always renders at full native resolution -- this is what
-  // keeps exports crisp regardless of how small the preview looks on screen.
+  // Keep the on-screen preview scaled to fit its container using ResizeObserver.
+  // Stage itself always renders at full native resolution for crisp exports.
   useEffect(() => {
-    function recalc() {
-      if (!wrapperRef.current) return
-      const available = wrapperRef.current.clientWidth - 32
-      const next = Math.min(1, available / canvasWidth)
-      setScale(next > 0 ? next : 1)
+    if (!wrapperRef.current) return
+
+    const handleResize = (entries) => {
+      for (let entry of entries) {
+        const { width: containerWidth, height: containerHeight } = entry.contentRect
+        const scaleX = (containerWidth - 40) / canvasWidth
+        const scaleY = (containerHeight - 100) / canvasHeight
+        const nextScale = Math.min(scaleX, scaleY)
+        setScale(Math.max(0.1, nextScale))
+      }
     }
-    recalc()
-    window.addEventListener('resize', recalc)
-    return () => window.removeEventListener('resize', recalc)
-  }, [canvasWidth])
+
+    const observer = new ResizeObserver(handleResize)
+    observer.observe(wrapperRef.current)
+
+    // Initial scale calculation
+    const initialWidth = wrapperRef.current.clientWidth
+    const initialHeight = wrapperRef.current.clientHeight
+    const initScaleX = (initialWidth - 40) / canvasWidth
+    const initScaleY = (initialHeight - 100) / canvasHeight
+    setScale(Math.max(0.1, Math.min(initScaleX, initScaleY)))
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [canvasWidth, canvasHeight])
 
   const handleExport = () => {
     setIsExporting(true)
@@ -74,12 +89,14 @@ export default function CanvasPreview({ config }) {
 
       <div
         ref={wrapperRef}
-        className="w-full flex-1 flex items-center justify-center overflow-auto bg-[#0F1115] rounded-xl border border-line p-4"
+        className="w-full h-full flex-1 flex items-center justify-center overflow-auto bg-[#0F1115] rounded-xl border border-line p-4"
       >
         <div
           style={{
             width: canvasWidth * scale,
             height: canvasHeight * scale,
+            display: 'flex',
+            justifyContent: 'center',
           }}
         >
           <div
@@ -87,7 +104,7 @@ export default function CanvasPreview({ config }) {
               width: canvasWidth,
               height: canvasHeight,
               transform: `scale(${scale})`,
-              transformOrigin: 'top left',
+              transformOrigin: 'top center',
               boxShadow: '0 10px 40px rgba(0,0,0,0.45)',
             }}
           >
