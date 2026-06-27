@@ -48,6 +48,15 @@ export default function Controls({ config, setConfig }) {
             Landscape
           </SegmentButton>
         </div>
+        <button
+          onClick={() => {
+            localStorage.clear()
+            window.location.reload()
+          }}
+          className="w-full mt-3 py-2 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors border border-dashed border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50"
+        >
+          Start Fresh (Clear Memory)
+        </button>
       </Section>
 
       <Section title="Captions">
@@ -364,7 +373,8 @@ function AvatarGroupEditor({ title, hint, list, max, onChange, freeLabel, autoLa
           slot={slot}
           index={i}
           freeLabel={freeLabel}
-          editableLabel={!autoLabel}
+          editableLabel={true}
+          autoLabel={autoLabel}
           onLabelChange={(label) => updateSlot(slot.id, { label })}
           onFile={async (file) => {
             const dataUrl = await fileToDataUrl(file)
@@ -384,8 +394,14 @@ function AvatarGroupEditor({ title, hint, list, max, onChange, freeLabel, autoLa
   )
 }
 
-function AvatarSlotRow({ slot, index, editableLabel, freeLabel, onLabelChange, onFile, onRemove }) {
+function AvatarSlotRow({ slot, index, editableLabel, freeLabel, autoLabel, onLabelChange, onFile, onRemove }) {
   const inputRef = useRef(null)
+  const placeholderText = freeLabel
+    ? 'e.g. Uncle, Grandma…'
+    : autoLabel
+    ? autoLabel(index)
+    : `Item #${index + 1}`
+
   return (
     <div className="flex items-center gap-2 bg-panel2 border border-line rounded-md p-2">
       <button
@@ -416,7 +432,7 @@ function AvatarSlotRow({ slot, index, editableLabel, freeLabel, onLabelChange, o
           type="text"
           value={slot.label}
           onChange={(e) => onLabelChange(e.target.value)}
-          placeholder={freeLabel ? 'e.g. Uncle, Grandma…' : `Item #${index + 1}`}
+          placeholder={placeholderText}
           className="input flex-1"
         />
       ) : (
