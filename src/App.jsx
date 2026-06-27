@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Controls from './components/Controls'
 import CanvasPreview from './components/CanvasPreview'
 import { defaultFamily, defaultFriends } from './utils/gridLayouts'
@@ -45,6 +45,31 @@ export default function App() {
     }
     return true
   })
+
+  const stageRef = useRef(null)
+  const [exportFormat, setExportFormat] = useState('png')
+  const [isExporting, setIsExporting] = useState(false)
+
+  const handleExport = () => {
+    setIsExporting(true)
+    // Defer one tick so any pending filter caching settles before capture.
+    requestAnimationFrame(() => {
+      if (!stageRef.current) return
+      const uri = stageRef.current.toDataURL({
+        pixelRatio: 3,
+        mimeType: exportFormat === 'jpeg' ? 'image/jpeg' : 'image/png',
+        quality: 0.95,
+      })
+      const link = document.createElement('a')
+      const safeName = (config.secondaryCaption || config.template || 'poster').replace(/[^a-z0-9]+/gi, '-')
+      link.download = `${safeName}-${Date.now()}.${exportFormat === 'jpeg' ? 'jpg' : 'png'}`
+      link.href = uri
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      setIsExporting(false)
+    })
+  }
 
   const [bgImage, setBgImage] = useState(() => {
     try {
@@ -149,22 +174,29 @@ export default function App() {
         `}
       >
         <button className="md:hidden absolute top-6 right-6 text-gray-400 hover:text-white z-50" onClick={() => setIsSidebarOpen(false)}><X size={24} /></button>
-        <Controls config={config} setConfig={setConfig} />
+        <Controls
+          config={config}
+          setConfig={setConfig}
+          exportFormat={exportFormat}
+          setExportFormat={setExportFormat}
+          isExporting={isExporting}
+          handleExport={handleExport}
+        />
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 h-full p-6 relative overflow-hidden flex flex-col transition-all duration-300">
+      <div className="flex-1 h-full p-3 md:p-6 relative overflow-hidden flex flex-col transition-all duration-300">
         {/* Floating toggle button */}
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className={`absolute top-6 left-6 z-40 p-2.5 rounded-lg bg-panel hover:bg-panel2 border border-line text-gray-200 hover:text-white shadow-lg transition-all focus:outline-none animate-fade-in ${isSidebarOpen ? 'hidden md:block' : 'block'}`}
+          className={`absolute top-3 left-3 md:top-6 md:left-6 z-40 p-2.5 rounded-lg bg-panel hover:bg-panel2 border border-line text-gray-200 hover:text-white shadow-lg transition-all focus:outline-none animate-fade-in ${isSidebarOpen ? 'hidden md:block' : 'block'}`}
           title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
         >
           {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
 
-        <div className="flex-1 h-full pt-12">
-          <CanvasPreview config={config} />
+        <div className="flex-1 h-full pt-10 md:pt-12">
+          <CanvasPreview config={config} stageRef={stageRef} />
         </div>
       </div>
     </div>

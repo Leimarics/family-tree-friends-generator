@@ -1,17 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { Stage, Layer, Rect, Text, Image as KonvaImage } from 'react-konva'
 import useImage from 'use-image'
 import Konva from 'konva'
-import { Download } from 'lucide-react'
 import { computeLayout } from '../utils/gridLayouts'
 import AvatarNode from './AvatarNode'
+import { Plus, Minus } from 'lucide-react'
 
-export default function CanvasPreview({ config }) {
-  const stageRef = useRef(null)
+export default function CanvasPreview({ config, stageRef }) {
   const wrapperRef = useRef(null)
-  const [scale, setScale] = useState(1)
-  const [exportFormat, setExportFormat] = useState('png')
-  const [isExporting, setIsExporting] = useState(false)
+  const [autoScale, setAutoScale] = useState(1)
+  const [zoomMode, setZoomMode] = useState('fit')
+  const [manualZoom, setManualZoom] = useState(1)
+
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 })
 
   const layout = computeLayout(config)
   const { canvasWidth, canvasHeight } = layout
@@ -24,10 +26,11 @@ export default function CanvasPreview({ config }) {
     const handleResize = (entries) => {
       for (let entry of entries) {
         const { width: containerWidth, height: containerHeight } = entry.contentRect
-        const scaleX = (containerWidth - 40) / canvasWidth
-        const scaleY = (containerHeight - 100) / canvasHeight
+        // Leave a tiny margin of 4px on each side (8px total)
+        const scaleX = (containerWidth - 8) / canvasWidth
+        const scaleY = (containerHeight - 8) / canvasHeight
         const nextScale = Math.min(scaleX, scaleY)
-        setScale(Math.max(0.1, nextScale))
+        setAutoScale(Math.max(0.1, nextScale))
       }
     }
 
@@ -37,74 +40,151 @@ export default function CanvasPreview({ config }) {
     // Initial scale calculation
     const initialWidth = wrapperRef.current.clientWidth
     const initialHeight = wrapperRef.current.clientHeight
-    const initScaleX = (initialWidth - 40) / canvasWidth
-    const initScaleY = (initialHeight - 100) / canvasHeight
-    setScale(Math.max(0.1, Math.min(initScaleX, initScaleY)))
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+    const padX = isMobile ? 16 + 8 : 32 + 8
+    const padY = isMobile ? 16 + 8 : 32 + 8
+    const initScaleX = (initialWidth - padX) / canvasWidth
+    const initScaleY = (initialHeight - padY) / canvasHeight
+    setAutoScale(Math.max(0.1, Math.min(initScaleX, initScaleY)))
 
     return () => {
       observer.disconnect()
     }
   }, [canvasWidth, canvasHeight])
 
-  const handleExport = () => {
-    setIsExporting(true)
-    // Defer one tick so any pending filter caching settles before capture.
-    requestAnimationFrame(() => {
-      const uri = stageRef.current.toDataURL({
-        pixelRatio: 3,
-        mimeType: exportFormat === 'jpeg' ? 'image/jpeg' : 'image/png',
-        quality: 0.95,
-      })
-      const link = document.createElement('a')
-      const safeName = (config.secondaryCaption || config.template || 'poster').replace(/[^a-z0-9]+/gi, '-')
-      link.download = `${safeName}-${Date.now()}.${exportFormat === 'jpeg' ? 'jpg' : 'png'}`
-      link.href = uri
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      setIsExporting(false)
+  // Mobile touch gesture zoom listener (passive: false is required to override default browser pinch zoom)
+  useEffect(() => {
+    const wrapper = wrapperRef.current
+    if (!wrapper) return
+
+    let startDist = 0
+    let startScale = 1
+    let lastTouchTime = 0
+
+    const onTouchStart = (e) => {
+      // 1. Handle pinch to zoom (2 fingers)
+      if (e.touches.length === 2) {
+        e.preventDefault()
+        startDist = Math.hypot(
+          e.touches[0].pageX - e.touches[1].pageX,
+          e.touches[0].pageY - e.touches[1].pageY
+        )
+        startScale = zoomMode === 'fit' ? autoScale : manualZoom
+      }
+      // 2. Handle double tap zoom (1 finger)
+      else if (e.touches.length === 1) {
+        const now = Date.now()
+        if (now - lastTouchTime < 300) {
+          e.preventDefault()
+          setZoomMode((prevMode) => {
+            if (prevMode === 'fit') {
+              setManualZoom(1.0)
+              return 'manual'
+            } else {
+              return 'fit'
+            }
+          })
+        }
+        lastTouchTime = now
+      }
+    }
+
+    const onTouchMove = (e) => {
+      if (e.touches.length === 2 && startDist > 0) {
+        e.preventDefault()
+        const dist = Math.hypot(
+          e.touches[0].pageX - e.touches[1].pageX,
+          e.touches[0].pageY - e.touches[1].pageY
+        )
+        const ratio = dist / startDist
+        let newScale = startScale * ratio
+        newScale = Math.min(2.0, Math.max(0.1, newScale))
+        setZoomMode('manual')
+        setManualZoom(Number(newScale.toFixed(2)))
+      }
+    }
+
+    const onTouchEnd = () => {
+      startDist = 0
+    }
+
+    wrapper.addEventListener('touchstart', onTouchStart, { passive: false })
+    wrapper.addEventListener('touchmove', onTouchMove, { passive: false })
+    wrapper.addEventListener('touchend', onTouchEnd)
+
+    return () => {
+      wrapper.removeEventListener('touchstart', onTouchStart)
+      wrapper.removeEventListener('touchmove', onTouchMove)
+      wrapper.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [autoScale, manualZoom, zoomMode])
+
+  const scale = zoomMode === 'fit' ? autoScale : manualZoom
+
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return // Only drag with left mouse button
+    setIsDragging(true)
+    setDragStart({
+      x: e.pageX,
+      y: e.pageY,
+      scrollLeft: wrapperRef.current.scrollLeft,
+      scrollTop: wrapperRef.current.scrollTop,
     })
   }
 
-  return (
-    <div className="flex flex-col items-center w-full h-full">
-      <div className="flex items-center gap-3 mb-4 flex-wrap justify-center">
-        <select
-          value={exportFormat}
-          onChange={(e) => setExportFormat(e.target.value)}
-          className="bg-panel2 border border-line text-sm rounded-md px-3 py-2 text-gray-200"
-        >
-          <option value="png">PNG (best quality)</option>
-          <option value="jpeg">JPEG (smaller file)</option>
-        </select>
-        <button
-          onClick={handleExport}
-          disabled={isExporting}
-          className="flex items-center gap-2 bg-accent hover:bg-accentDim transition-colors text-white px-5 py-2 rounded-md font-medium shadow-lg shadow-accent/20 disabled:opacity-60"
-        >
-          <Download size={18} />
-          {isExporting ? 'Preparing…' : 'Export & Download'}
-        </button>
-      </div>
+  const handleMouseUpOrLeave = () => {
+    setIsDragging(false)
+  }
 
+  const handleMouseMove = (e) => {
+    if (!isDragging) return
+    e.preventDefault()
+    const walkX = e.pageX - dragStart.x
+    const walkY = e.pageY - dragStart.y
+    wrapperRef.current.scrollLeft = dragStart.scrollLeft - walkX
+    wrapperRef.current.scrollTop = dragStart.scrollTop - walkY
+  }
+
+  const handleDoubleClick = () => {
+    if (zoomMode === 'fit') {
+      setZoomMode('manual')
+      setManualZoom(1.0) // Zoom to 100%
+    } else {
+      setZoomMode('fit')
+    }
+  }
+
+  return (
+    <div className="w-full h-full relative flex flex-col">
       <div
         ref={wrapperRef}
-        className="w-full h-full flex-1 flex items-center justify-center overflow-auto bg-[#0F1115] rounded-xl border border-line p-4"
+        onDoubleClick={handleDoubleClick}
+        className={`w-full h-full flex-1 flex overflow-auto bg-[#0F1115] rounded-xl border border-line p-2 md:p-4 select-none transition-all ${
+          isDragging ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUpOrLeave}
+        onMouseLeave={handleMouseUpOrLeave}
       >
         <div
           style={{
             width: canvasWidth * scale,
             height: canvasHeight * scale,
-            display: 'flex',
-            justifyContent: 'center',
+            position: 'relative',
+            margin: 'auto',
+            flexShrink: 0,
           }}
         >
           <div
             style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
               width: canvasWidth,
               height: canvasHeight,
               transform: `scale(${scale})`,
-              transformOrigin: 'top center',
+              transformOrigin: 'top left',
               boxShadow: '0 10px 40px rgba(0,0,0,0.45)',
             }}
           >
@@ -113,6 +193,61 @@ export default function CanvasPreview({ config }) {
             </Stage>
           </div>
         </div>
+      </div>
+
+      {/* Floating Zoom Controls */}
+      <div className="absolute bottom-4 right-4 z-10 flex items-center gap-3 bg-panel/90 backdrop-blur border border-line px-3 py-2 rounded-full shadow-xl">
+        <button
+          onClick={() => {
+            setZoomMode('manual')
+            setManualZoom((prev) => Math.max(0.1, Number((prev - 0.1).toFixed(2))))
+          }}
+          className="text-gray-400 hover:text-white transition-colors"
+          title="Zoom Out"
+        >
+          <Minus size={16} />
+        </button>
+
+        <button
+          onClick={() => {
+            setZoomMode('fit')
+          }}
+          className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
+            zoomMode === 'fit'
+              ? 'bg-accent text-white'
+              : 'bg-panel2 text-gray-300 hover:text-white border border-line'
+          }`}
+        >
+          Fit
+        </button>
+
+        <input
+          type="range"
+          min="0.1"
+          max="2.0"
+          step="0.05"
+          value={scale}
+          onChange={(e) => {
+            setZoomMode('manual')
+            setManualZoom(parseFloat(e.target.value))
+          }}
+          className="w-16 md:w-24 accent-accent cursor-pointer h-1 bg-line rounded-lg appearance-none"
+        />
+
+        <span className="text-[10px] md:text-xs font-semibold text-gray-300 min-w-[36px] text-right">
+          {Math.round(scale * 100)}%
+        </span>
+
+        <button
+          onClick={() => {
+            setZoomMode('manual')
+            setManualZoom((prev) => Math.min(2.0, Number((prev + 0.1).toFixed(2))))
+          }}
+          className="text-gray-400 hover:text-white transition-colors"
+          title="Zoom In"
+        >
+          <Plus size={16} />
+        </button>
       </div>
     </div>
   )

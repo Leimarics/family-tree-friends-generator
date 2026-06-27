@@ -1,9 +1,9 @@
 import React, { useRef } from 'react'
-import { Plus, Trash2, Upload, Moon, Image as ImageIcon, Frame as FrameIcon } from 'lucide-react'
+import { Plus, Trash2, Upload, Moon, Image as ImageIcon, Frame as FrameIcon, Download } from 'lucide-react'
 import { fileToDataUrl, isImageFile } from '../utils/fileToDataUrl'
 import { GROUP_LIMITS, makeSlot } from '../utils/gridLayouts'
 
-export default function Controls({ config, setConfig }) {
+export default function Controls({ config, setConfig, exportFormat, setExportFormat, isExporting, handleExport }) {
   const update = (patch) => setConfig((prev) => ({ ...prev, ...patch }))
 
   const updateFamilyGroup = (groupKey, nextList) =>
@@ -240,6 +240,26 @@ export default function Controls({ config, setConfig }) {
           autoLabel={(i) => `Friend #${i + 1}`}
         />
       )}
+      <Section title="Export">
+        <div className="flex flex-col gap-3">
+          <select
+            value={exportFormat}
+            onChange={(e) => setExportFormat(e.target.value)}
+            className="w-full bg-panel2 border border-line text-sm rounded-md px-3 py-2 text-gray-200"
+          >
+            <option value="png">PNG (best quality)</option>
+            <option value="jpeg">JPEG (smaller file)</option>
+          </select>
+          <button
+            onClick={handleExport}
+            disabled={isExporting}
+            className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accentDim transition-colors text-white px-5 py-2 rounded-md font-medium shadow-lg shadow-accent/20 disabled:opacity-60"
+          >
+            <Download size={18} />
+            {isExporting ? 'Preparing…' : 'Export & Download'}
+          </button>
+        </div>
+      </Section>
     </div>
   )
 }
