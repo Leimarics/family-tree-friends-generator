@@ -1,28 +1,29 @@
 # Poster Generator — Family Tree / Friends' Frenzy
 
-A private, internal tool for generating "Family Tree" and "Friends' Frenzy" posters.
-Pure client-side app — nothing is uploaded to a server, nothing is stored in a
-database. Everything happens in the browser and the final poster is downloaded
-directly as a PNG or JPEG.
+A premium, interactive web tool for generating "Family Tree" and "Friends' Frenzy" posters. Everything runs client-side inside the browser—drafts persist automatically, and files are exported directly to PNG or JPEG at print-ready 3x resolution.
 
-## What it does
+**Live Demo:** [https://family-tree-friends-generator.vercel.app/](https://family-tree-friends-generator.vercel.app/)
 
-- Two templates: **Family Tree** (Parents → Relatives → Children) and
-  **Friends' Frenzy** (up to 8 friends).
-- Two orientations: **Portrait** and **Landscape**.
-- Editable: main caption, date, secondary caption, promo message (bottom).
-- Background image upload with independent **opacity** (faint ↔ solid) and
-  **brightness** (dark ↔ bright) controls.
-- Per-avatar upload for every role (Father, Mother, Uncle, Aunt, Child #1...,
-  Friend #1...). Non-square photos are automatically center-cropped to a
-  circle — they never get squished.
-- One-click **"Mark all avatars dark"** — fixes the common problem of
-  avatars coming out with inconsistent contrast, by applying a uniform
-  brightness/contrast filter to every avatar at once.
-- Optional **photo frame border** with adjustable color and width.
-- Logo upload (falls back to editable text until one is uploaded).
-- **Export** to PNG (lossless) or JPEG, downloaded directly — rendered at
-  3x resolution so it's print-ready, not just screen-ready.
+---
+
+## Key Features
+
+- **Double Template & Orientation Support**: Generates **Family Tree** and **Friends' Frenzy** layouts in either **Portrait** or **Landscape** orientations.
+- **LocalStorage State Persistence**: Canvas inputs, captions, background options, and uploaded avatars are saved automatically. Refreshes won't lose your work.
+- **Collapsible Responsive Sidebar**: Collapses completely on desktop to expand the preview workspace to 100% viewport width, and transforms into a responsive overlay panel on mobile viewports.
+- **Draggable & Scalable Logo Node**: Upload a logo image or use custom text, and select it to drag, resize, or scale it dynamically anywhere on the canvas using a Konva Transformer.
+- **Smart Orientation Clamping**: Boundary constraints prevent the logo from rendering off-screen or getting lost when switching between templates or orientations.
+- **Advanced Interactive Canvas Controls**:
+  - **Dynamic Scaling**: Canvas automatically scales to fit available screen space via a `ResizeObserver`.
+  - **Zoom controls**: Floating zoom menu with presets, slider, and quick-fit button supporting 10% to 200% zoom.
+  - **Drag-to-Pan**: Click and drag to slide around a zoomed-in canvas.
+  - **Double-click / Double-tap zoom**: Instantly toggles between fit-to-screen and 100% manual size.
+  - **Mobile Touch Gestures**: Supports touchscreen multi-touch pinch-to-zoom (with optimized 3x sensitivity multiplier) and double-tap detection.
+  - **Scroll-safe centering**: Uses margin-auto alignment so canvas is centered when small but fully scrollable without clipping when zoomed in.
+- **Avatar Fine-Tuning**: Non-square uploaded avatars are center-cropped to circles. Features an editable label system with dynamic placeholders and a "Mark all avatars dark" contrast toggle.
+- **Start Fresh Mechanism**: A "Start Fresh (Clear Memory)" option resets all custom inputs, settings, and coordinates back to pristine default center layouts.
+
+---
 
 ## Running it locally
 
@@ -39,77 +40,46 @@ Opens at `http://localhost:5173`. Hot-reloads on save.
 npm run build
 ```
 
-Outputs a fully static site into `dist/`. This is what you deploy — there is
-no server, no API, no environment variables required.
+Outputs a fully static site into `dist/`. This is what you deploy — there is no server, no API, no environment variables required.
+
+---
 
 ## Project structure
 
 ```
 src/
 ├── components/
-│   ├── Controls.jsx        # Left sidebar: every form field, upload, and toggle
-│   ├── CanvasPreview.jsx    # Right side: the Konva stage, background, export
-│   └── AvatarNode.jsx       # One avatar: crop-to-square, circular clip, darken filter
+│   ├── Controls.jsx        # Left sidebar: inputs, layout choices, and export panel
+│   ├── CanvasPreview.jsx   # Right side: Konva stage, scaling, panning, zoom, and Transformer
+│   └── AvatarNode.jsx      # One avatar slot: crop-to-square, circular clip, contrast filters
 ├── utils/
-│   ├── gridLayouts.js       # All grid math — positions, max counts, per-orientation tuning
-│   └── fileToDataUrl.js     # Converts uploads to base64 (avoids canvas export errors)
-├── App.jsx                  # Top-level state shape
-├── index.css
+│   ├── gridLayouts.js      # Layout mathematics — coordinates, limits, and orientation tuning
+│   └── fileToDataUrl.js    # Base64 helper for image uploads
+├── App.jsx                 # Central application state & localStorage synchronization
+├── index.css               # Core styling and Tailwind customization
 └── main.jsx
 ```
 
-If Anthony ever wants to tweak how many relatives/children/friends are
-allowed, or resize the avatars, it's all in one place:
-`src/utils/gridLayouts.js` → `GROUP_LIMITS` and the `FAMILY_TUNING` /
-`FRIENDS_TUNING` objects. Nothing else needs to change.
+To adjust the spacing parameters or limits of relative, child, or friend avatars, edit `src/utils/gridLayouts.js`.
 
-## Deploying — Vercel (do this now)
+---
+
+## Deploying to Vercel
 
 1. Push this folder to a **private** GitHub repo.
-2. Go to vercel.com → **Add New Project** → import the repo.
-3. Vercel auto-detects Vite. Default build command (`npm run build`) and
-   output directory (`dist`) are already correct — no config needed.
-4. Once deployed: **Project Settings → Deployment Protection → Password
-   Protection**. Turn it on, set one shared password for Anthony and his
-   wife. This is the "only for the two of them" requirement from the brief.
-5. Share the Vercel URL + password.
+2. Go to [vercel.com](https://vercel.com) → **Add New Project** → import the repo.
+3. Vercel auto-detects Vite. Default build command (`npm run build`) and output directory (`dist`) are already correct — no config needed.
+4. **Password protection**: Under Vercel project settings, turn on Password Protection to ensure only authorized users (e.g. clients) can access the live generator.
 
-Every time you `git push`, Vercel redeploys automatically — there's no
-manual redeploy step for future tweaks.
+## Deploying to AWS (S3 + CloudFront)
 
-## Deploying — AWS (when you move it to Leimarics' own account)
+1. **S3 bucket**: Create a bucket and sync the build directory: `aws s3 sync dist/ s3://your-bucket --delete`
+2. **CloudFront**: Attach a distribution pointing to S3 using Origin Access Control (OAC) to enable SSL and fast delivery.
+3. **Lambda@Edge**: Attach a lightweight function on the *Viewer Request* event to handle HTTP Basic Authentication for password protection.
 
-This app builds to a plain static folder, so the AWS setup is the standard
-S3 + CloudFront pattern:
+---
 
-1. **S3 bucket**: create one (e.g. `leimarics-poster-tool`). Run
-   `npm run build` locally, then upload the contents of `dist/` (not the
-   folder itself — its *contents*) to the bucket root.
-2. **CloudFront distribution**: point it at the S3 bucket as an origin
-   (use Origin Access Control, not a public bucket). This gets you HTTPS
-   and fast global delivery for free-tier-friendly cost.
-3. **Route53** (optional): point a subdomain like `tools.leimarics.com` at
-   the CloudFront distribution if you want a clean URL instead of the
-   default `*.cloudfront.net` one.
-4. **Password protection**: S3/CloudFront has no built-in login screen.
-   Attach a small **Lambda@Edge** function on the CloudFront *Viewer
-   Request* event that checks for an `Authorization: Basic ...` header and
-   returns a 401 challenge if it's missing — standard HTTP Basic Auth.
-   This is the same effect as Vercel's password protection, just self-hosted.
-5. Future redeploys: `npm run build` → `aws s3 sync dist/ s3://your-bucket
-   --delete` → CloudFront invalidation (`aws cloudfront
-   create-invalidation --distribution-id YOUR_ID --paths "/*"`). Worth
-   wrapping in a one-line script once you're on AWS full-time.
+## Known limitations (by design)
 
-## Known limitations (by design, given the 5-day scope)
-
-- No save/load of in-progress posters — it's a single-session tool. If
-  Anthony wants drafts saved across sessions later, that's a backend
-  add-on (e.g. Supabase), not a rebuild — the frontend doesn't need to
-  change for that.
-- SVG avatar uploads work, but if an SVG references external assets
-  (fonts, images by URL) those won't render on canvas — flag this to
-  Anthony if his avatar tool exports linked SVGs rather than embedded ones.
-- Relatives are capped at 6 and friends at 8 by `GROUP_LIMITS` — easy to
-  raise, just re-check the vertical spacing in `gridLayouts.js` if you do,
-  so rows don't start overlapping at high counts.
+- SVG avatar uploads work, but if an SVG references external assets (fonts, images by URL), those won't render on the canvas. Ensure SVGs export with embedded assets rather than linked ones.
+- Relatives are capped at 6 and friends at 8 by `GROUP_LIMITS` (adjustable in `gridLayouts.js`).
