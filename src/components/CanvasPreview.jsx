@@ -1,16 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { Stage, Layer, Rect, Text, Image as KonvaImage } from 'react-konva'
+import { Stage, Layer, Rect, Text, Image as KonvaImage, Group, Transformer } from 'react-konva'
 import useImage from 'use-image'
 import Konva from 'konva'
 import { computeLayout } from '../utils/gridLayouts'
 import AvatarNode from './AvatarNode'
 import { Plus, Minus } from 'lucide-react'
 
-export default function CanvasPreview({ config, stageRef }) {
+export default function CanvasPreview({ config, setConfig, stageRef }) {
   const wrapperRef = useRef(null)
   const [autoScale, setAutoScale] = useState(1)
   const [zoomMode, setZoomMode] = useState('fit')
   const [manualZoom, setManualZoom] = useState(1)
+  const [selectedId, selectShape] = useState(null)
 
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 })
@@ -190,8 +191,28 @@ export default function CanvasPreview({ config, stageRef }) {
               boxShadow: '0 10px 40px rgba(0,0,0,0.45)',
             }}
           >
-            <Stage width={canvasWidth} height={canvasHeight} ref={stageRef}>
-              <PosterLayer config={config} layout={layout} />
+            <Stage
+              width={canvasWidth}
+              height={canvasHeight}
+              ref={stageRef}
+              onMouseDown={(e) => {
+                if (e.target === e.target.getStage()) {
+                  selectShape(null)
+                }
+              }}
+              onTouchStart={(e) => {
+                if (e.target === e.target.getStage()) {
+                  selectShape(null)
+                }
+              }}
+            >
+              <PosterLayer
+                config={config}
+                setConfig={setConfig}
+                layout={layout}
+                selectedId={selectedId}
+                selectShape={selectShape}
+              />
             </Stage>
           </div>
         </div>
@@ -255,11 +276,14 @@ export default function CanvasPreview({ config, stageRef }) {
   )
 }
 
-function PosterLayer({ config, layout }) {
+function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
   const { canvasWidth, canvasHeight, header, avatarSlots, promoY, promoSize, logoY, logoSize } = layout
   const [bgImage] = useImage(config.background.dataUrl || undefined, 'anonymous')
   const [logoImage] = useImage(config.logo.dataUrl || undefined, 'anonymous')
   const bgRef = useRef(null)
+
+  const logoGroupRef = useRef(null)
+  const transformerRef = useRef(null)
 
   useEffect(() => {
     if (bgImage && bgRef.current) {
@@ -267,6 +291,39 @@ function PosterLayer({ config, layout }) {
       bgRef.current.getLayer()?.batchDraw()
     }
   }, [bgImage, config.background.brightness])
+
+  useEffect(() => {
+    if (selectedId === 'logo' && transformerRef.current && logoGroupRef.current) {
+      transformerRef.current.nodes([logoGroupRef.current])
+      transformerRef.current.getLayer()?.batchDraw()
+    }
+  }, [selectedId, config.logo])
+
+  const updateLogoState = (newFields) => {
+    if (!setConfig) return
+    setConfig((prev) => ({
+      ...prev,
+      logo: {
+        ...prev.logo,
+        ...newFields,
+      },
+    }))
+  }
+
+  const logoScaleX = config.logo.scaleX !== undefined ? config.logo.scaleX : 1
+  const logoScaleY = config.logo.scaleY !== undefined ? config.logo.scaleY : 1
+
+  // Calculate dynamic boundaries so that the logo stays fully visible on screen
+  const logoHalfWidth = (logoImage ? logoSize : 300) * logoScaleX / 2
+  const logoHalfHeight = (logoImage ? logoSize : 24) * logoScaleY / 2
+
+  const logoX = config.logo.x !== undefined 
+    ? Math.max(logoHalfWidth, Math.min(canvasWidth - logoHalfWidth, config.logo.x)) 
+    : canvasWidth / 2
+
+  const logoYCoord = config.logo.y !== undefined 
+    ? Math.max(logoHalfHeight, Math.min(canvasHeight - logoHalfHeight, config.logo.y)) 
+    : logoY + logoSize / 2
 
   return (
     <Layer>
@@ -346,26 +403,70 @@ function PosterLayer({ config, layout }) {
         lineHeight={1.4}
       />
 
-      {/* Logo */}
-      {logoImage ? (
-        <KonvaImage
-          image={logoImage}
-          x={canvasWidth / 2 - logoSize / 2}
-          y={logoY}
-          width={logoSize}
-          height={logoSize}
-        />
-      ) : (
-        <Text
-          text={config.logo.fallbackText || ''}
-          x={0}
-          y={logoY + logoSize / 3}
-          width={canvasWidth}
-          align="center"
-          fontSize={18}
-          fontFamily="Inter, Arial, sans-serif"
-          fontStyle="600"
-          fill="#1A1A1A"
+      {/* Draggable Logo Group */}
+      <Group
+        ref={logoGroupRef}
+        draggable
+        x={logoX}
+        y={logoYCoord}
+        scaleX={logoScaleX}
+        scaleY={logoScaleY}
+        onClick={() => selectShape('logo')}
+        onTap={() => selectShape('logo')}
+        onDragEnd={(e) => {
+          const node = e.target
+          updateLogoState({
+            x: node.x(),
+            y: node.y(),
+          })
+        }}
+        onTransformEnd={(e) => {
+          const node = e.target
+          // Read scale values applied by Transformer
+          const scaleX = node.scaleX()
+          const scaleY = node.scaleY()
+          updateLogoState({
+            x: node.x(),
+            y: node.y(),
+            scaleX: scaleX,
+            scaleY: scaleY,
+          })
+        }}
+      >
+        {logoImage ? (
+          <KonvaImage
+            image={logoImage}
+            x={-logoSize / 2}
+            y={-logoSize / 2}
+            width={logoSize}
+            height={logoSize}
+          />
+        ) : (
+          <Text
+            text={config.logo.fallbackText || ''}
+            x={-150}
+            y={-12}
+            width={300}
+            align="center"
+            fontSize={18}
+            fontFamily="Inter, Arial, sans-serif"
+            fontStyle="600"
+            fill="#1A1A1A"
+          />
+        )}
+      </Group>
+
+      {/* Attach Transformer conditionally */}
+      {selectedId === 'logo' && (
+        <Transformer
+          ref={transformerRef}
+          boundBoxFunc={(oldBox, newBox) => {
+            // Limit minimum size
+            if (Math.abs(newBox.width) < 10 || Math.abs(newBox.height) < 10) {
+              return oldBox
+            }
+            return newBox
+          }}
         />
       )}
 

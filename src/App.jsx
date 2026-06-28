@@ -31,6 +31,10 @@ function initialConfig() {
     logo: {
       dataUrl: null,
       fallbackText: 'Your Logo Here',
+      x: undefined,
+      y: undefined,
+      scaleX: 1,
+      scaleY: 1,
     },
 
     family: defaultFamily(),
@@ -103,11 +107,23 @@ export default function App() {
       const savedAvatars = localStorage.getItem('avatars')
       const avatarsVal = savedAvatars ? JSON.parse(savedAvatars) : null
 
+      const logoVal = parsed.logo || {}
+      const isOldDefault = logoVal.x === 400 && logoVal.y === 1100
+      const activeX = isOldDefault ? undefined : logoVal.x
+      const activeY = isOldDefault ? undefined : logoVal.y
       return {
         ...parsed,
         background: {
           ...(parsed.background || {}),
           dataUrl: bgVal !== null ? bgVal : (parsed.background?.dataUrl || null),
+        },
+        logo: {
+          dataUrl: logoVal.dataUrl !== undefined ? logoVal.dataUrl : null,
+          fallbackText: logoVal.fallbackText !== undefined ? logoVal.fallbackText : 'Your Logo Here',
+          x: activeX !== undefined ? activeX : undefined,
+          y: activeY !== undefined ? activeY : undefined,
+          scaleX: logoVal.scaleX !== undefined ? logoVal.scaleX : 1,
+          scaleY: logoVal.scaleY !== undefined ? logoVal.scaleY : 1,
         },
         family: avatarsVal ? avatarsVal.family : (parsed.family || defaultFamily()),
         friends: avatarsVal ? avatarsVal.friends : (parsed.friends || defaultFriends()),
@@ -196,7 +212,7 @@ export default function App() {
         </button>
 
         <div className="flex-1 h-full pt-10 md:pt-12">
-          <CanvasPreview config={config} stageRef={stageRef} />
+          <CanvasPreview config={config} setConfig={setConfig} stageRef={stageRef} />
         </div>
       </div>
     </div>
