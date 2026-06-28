@@ -97,7 +97,9 @@ export default function CanvasPreview({ config, stageRef }) {
           e.touches[0].pageY - e.touches[1].pageY
         )
         const ratio = dist / startDist
-        let newScale = startScale * ratio
+        // Amplify the zoom sensitivity by 3x
+        const adjustedRatio = 1.0 + (ratio - 1.0) * 3.0
+        let newScale = startScale * adjustedRatio
         newScale = Math.min(2.0, Math.max(0.1, newScale))
         setZoomMode('manual')
         setManualZoom(Number(newScale.toFixed(2)))
