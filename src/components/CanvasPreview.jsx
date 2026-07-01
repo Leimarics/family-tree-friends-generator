@@ -287,6 +287,7 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
   const dateRef = useRef(null)
   const secondaryCaptionRef = useRef(null)
   const promoMessageRef = useRef(null)
+  const avatarRefs = useRef({})
   const transformerRef = useRef(null)
 
   useEffect(() => {
@@ -310,6 +311,8 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
       targetNode = secondaryCaptionRef.current
     } else if (selectedId === 'promoMessage') {
       targetNode = promoMessageRef.current
+    } else if (selectedId && avatarRefs.current[selectedId]) {
+      targetNode = avatarRefs.current[selectedId]
     }
 
     if (targetNode) {
@@ -324,7 +327,9 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
     config.mainCaption,
     config.date,
     config.secondaryCaption,
-    config.promoMessage
+    config.promoMessage,
+    config.family,
+    config.friends
   ])
 
   const updateLogoState = (newFields) => {
@@ -347,6 +352,35 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
         ...newFields,
       },
     }))
+  }
+
+  const updateAvatarPosition = (category, id, newFields) => {
+    if (!setConfig) return
+    setConfig((prev) => {
+      if (category === 'friends') {
+        const nextList = prev.friends.list.map((item) =>
+          item.id === id ? { ...item, ...newFields } : item
+        )
+        return {
+          ...prev,
+          friends: {
+            ...prev.friends,
+            list: nextList,
+          },
+        }
+      } else {
+        const nextGroup = prev.family[category].map((item) =>
+          item.id === id ? { ...item, ...newFields } : item
+        )
+        return {
+          ...prev,
+          family: {
+            ...prev.family,
+            [category]: nextGroup,
+          },
+        }
+      }
+    })
   }
 
   const logoScaleX = config.logo.scaleX !== undefined ? config.logo.scaleX : 1
@@ -474,17 +508,60 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
 
       {/* Avatars — always render every defined slot (placeholder circle if
           no image yet) so it's clear to the user where each role goes */}
-      {avatarSlots.map((slot) => (
-        <AvatarNode
-          key={slot.id}
-          x={slot.x}
-          y={slot.y}
-          size={slot.size}
-          label={slot.label}
-          dataUrl={slot.dataUrl}
-          darken={config.darkenAllAvatars}
-        />
-      ))}
+      {avatarSlots.map((slot) => {
+        const calculatedGridX = slot.x
+        const calculatedGridY = slot.y
+
+        const avatarX = slot.customX ?? calculatedGridX
+        const avatarY = slot.customY ?? calculatedGridY
+        const avatarScaleX = slot.scaleX ?? 1
+        const avatarScaleY = slot.scaleY ?? 1
+
+        return (
+          <Group
+            key={slot.id}
+            ref={(node) => {
+              if (node) {
+                avatarRefs.current[slot.id] = node
+              } else {
+                delete avatarRefs.current[slot.id]
+              }
+            }}
+            draggable
+            x={avatarX}
+            y={avatarY}
+            scaleX={avatarScaleX}
+            scaleY={avatarScaleY}
+            onClick={() => selectShape(slot.id)}
+            onTap={() => selectShape(slot.id)}
+            onDragEnd={(e) => {
+              const node = e.target
+              updateAvatarPosition(slot.category, slot.id, {
+                customX: node.x(),
+                customY: node.y(),
+              })
+            }}
+            onTransformEnd={(e) => {
+              const node = e.target
+              updateAvatarPosition(slot.category, slot.id, {
+                customX: node.x(),
+                customY: node.y(),
+                scaleX: node.scaleX(),
+                scaleY: node.scaleY(),
+              })
+            }}
+          >
+            <AvatarNode
+              x={0}
+              y={0}
+              size={slot.size}
+              label={slot.label}
+              dataUrl={slot.dataUrl}
+              darken={config.darkenAllAvatars}
+            />
+          </Group>
+        )
+      })}
 
       {/* Promo message */}
       <Text

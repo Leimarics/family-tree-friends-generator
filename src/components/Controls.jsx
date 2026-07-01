@@ -60,16 +60,25 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
         <button
           onClick={() => {
             update({
-              mainCaption: { ...config.mainCaption, x: undefined, y: undefined },
-              date: { ...config.date, x: undefined, y: undefined },
-              secondaryCaption: { ...config.secondaryCaption, x: undefined, y: undefined },
-              promoMessage: { ...config.promoMessage, x: undefined, y: undefined },
-              logo: { ...config.logo, x: undefined, y: undefined }
+              mainCaption: { ...config.mainCaption, x: undefined, y: undefined, scaleX: undefined, scaleY: undefined },
+              date: { ...config.date, x: undefined, y: undefined, scaleX: undefined, scaleY: undefined },
+              secondaryCaption: { ...config.secondaryCaption, x: undefined, y: undefined, scaleX: undefined, scaleY: undefined },
+              promoMessage: { ...config.promoMessage, x: undefined, y: undefined, scaleX: undefined, scaleY: undefined },
+              logo: { ...config.logo, x: undefined, y: undefined, scaleX: undefined, scaleY: undefined },
+              family: {
+                parents: config.family.parents.map(a => ({ ...a, customX: undefined, customY: undefined, scaleX: undefined, scaleY: undefined })),
+                relatives: config.family.relatives.map(a => ({ ...a, customX: undefined, customY: undefined, scaleX: undefined, scaleY: undefined })),
+                children: config.family.children.map(a => ({ ...a, customX: undefined, customY: undefined, scaleX: undefined, scaleY: undefined })),
+              },
+              friends: {
+                ...config.friends,
+                list: config.friends.list.map(a => ({ ...a, customX: undefined, customY: undefined, scaleX: undefined, scaleY: undefined })),
+              }
             })
           }}
           className="w-full mt-2 py-2 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors border border-dashed border-sky-500/30 text-sky-400 hover:bg-sky-500/10 hover:border-sky-500/50"
         >
-          Reset Text Positions
+          Reset Custom Positions
         </button>
       </Section>
 

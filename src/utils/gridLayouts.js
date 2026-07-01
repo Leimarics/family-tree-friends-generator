@@ -123,7 +123,7 @@ export function computeLayout(config) {
       labelSpace: t.labelSpace,
     })
     list.forEach((slot, i) => {
-      avatarSlots.push({ ...slot, ...pos[i] })
+      avatarSlots.push({ ...slot, ...pos[i], category: 'friends' })
     })
   } else {
     const groups = [
@@ -144,7 +144,7 @@ export function computeLayout(config) {
         labelSpace: t.labelSpace,
       })
       list.forEach((slot, i) => {
-        avatarSlots.push({ ...slot, ...pos[i] })
+        avatarSlots.push({ ...slot, ...pos[i], category: key })
       })
     })
   }
