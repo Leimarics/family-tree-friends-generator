@@ -419,6 +419,7 @@ function AvatarGroupEditor({ title, hint, list, max, onChange, freeLabel, autoLa
           editableLabel={true}
           autoLabel={autoLabel}
           onLabelChange={(label) => updateSlot(slot.id, { label })}
+          onShapeChange={(shape) => updateSlot(slot.id, { shape })}
           onFile={async (file) => {
             const dataUrl = await fileToDataUrl(file)
             updateSlot(slot.id, { dataUrl })
@@ -437,7 +438,7 @@ function AvatarGroupEditor({ title, hint, list, max, onChange, freeLabel, autoLa
   )
 }
 
-function AvatarSlotRow({ slot, index, editableLabel, freeLabel, autoLabel, onLabelChange, onFile, onRemove }) {
+function AvatarSlotRow({ slot, index, editableLabel, freeLabel, autoLabel, onLabelChange, onShapeChange, onFile, onRemove }) {
   const inputRef = useRef(null)
   const placeholderText = freeLabel
     ? 'e.g. Uncle, Grandma…'
@@ -446,45 +447,61 @@ function AvatarSlotRow({ slot, index, editableLabel, freeLabel, autoLabel, onLab
     : `Item #${index + 1}`
 
   return (
-    <div className="flex items-center gap-2 bg-panel2 border border-line rounded-md p-2">
-      <button
-        onClick={() => inputRef.current?.click()}
-        className="w-11 h-11 rounded-full border border-line flex items-center justify-center overflow-hidden shrink-0 bg-[#1A1D24]"
-        title="Upload avatar"
-      >
-        {slot.dataUrl ? (
-          <img src={slot.dataUrl} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <ImageIcon size={16} className="text-gray-500" />
-        )}
-      </button>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
-          if (file && isImageFile(file)) onFile(file)
-          e.target.value = ''
-        }}
-      />
-
-      {editableLabel ? (
+    <div className="flex flex-col gap-1.5 bg-panel2 border border-line rounded-md p-2">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => inputRef.current?.click()}
+          className="w-11 h-11 rounded-full border border-line flex items-center justify-center overflow-hidden shrink-0 bg-[#1A1D24]"
+          title="Upload avatar"
+        >
+          {slot.dataUrl ? (
+            <img src={slot.dataUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <ImageIcon size={16} className="text-gray-500" />
+          )}
+        </button>
         <input
-          type="text"
-          value={slot.label}
-          onChange={(e) => onLabelChange(e.target.value)}
-          placeholder={placeholderText}
-          className="input flex-1"
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file && isImageFile(file)) onFile(file)
+            e.target.value = ''
+          }}
         />
-      ) : (
-        <span className="flex-1 text-sm text-gray-300">{slot.label}</span>
-      )}
 
-      <button onClick={onRemove} className="text-gray-500 hover:text-red-400 shrink-0">
-        <Trash2 size={16} />
-      </button>
+        {editableLabel ? (
+          <input
+            type="text"
+            value={slot.label}
+            onChange={(e) => onLabelChange(e.target.value)}
+            placeholder={placeholderText}
+            className="input flex-1"
+          />
+        ) : (
+          <span className="flex-1 text-sm text-gray-300">{slot.label}</span>
+        )}
+
+        <button onClick={onRemove} className="text-gray-500 hover:text-red-400 shrink-0">
+          <Trash2 size={16} />
+        </button>
+      </div>
+
+      <div className="flex items-center gap-2 pl-[52px]">
+        <span className="text-xs text-gray-500 shrink-0">Shape:</span>
+        <select
+          value={slot.shape || 'circle'}
+          onChange={(e) => onShapeChange(e.target.value)}
+          className="bg-[#1F2430] border border-line rounded px-2 py-0.5 text-xs text-gray-300 focus:outline-none focus:border-accent flex-1"
+        >
+          <option value="circle">Circle</option>
+          <option value="square">Square</option>
+          <option value="rounded">Rounded Square</option>
+          <option value="oval">Oval</option>
+        </select>
+      </div>
     </div>
   )
 }

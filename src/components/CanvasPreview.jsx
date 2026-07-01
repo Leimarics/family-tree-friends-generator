@@ -558,6 +558,7 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
               label={slot.label}
               dataUrl={slot.dataUrl}
               darken={config.darkenAllAvatars}
+              shape={slot.shape || 'circle'}
             />
           </Group>
         )
