@@ -4,15 +4,34 @@ import CanvasPreview from './components/CanvasPreview'
 import { defaultFamily, defaultFriends } from './utils/gridLayouts'
 import { Menu, X } from 'lucide-react'
 
+function migrateTextProp(val, defaultText, defaultX, defaultY) {
+  if (!val) {
+    return { text: defaultText, x: undefined, y: undefined, scaleX: 1, scaleY: 1 }
+  }
+  if (typeof val === 'string') {
+    return { text: val, x: undefined, y: undefined, scaleX: 1, scaleY: 1 }
+  }
+  // Reset legacy hardcoded defaults to undefined so they compute dynamically
+  const isLegacyX = val.x === 0 || val.x === 40
+  const isLegacyY = val.y === 50 || val.y === 90 || val.y === 120 || val.y === 1000
+  return {
+    text: val.text !== undefined ? val.text : defaultText,
+    x: (val.x !== undefined && !isLegacyX) ? val.x : undefined,
+    y: (val.y !== undefined && !isLegacyY) ? val.y : undefined,
+    scaleX: val.scaleX !== undefined ? val.scaleX : 1,
+    scaleY: val.scaleY !== undefined ? val.scaleY : 1,
+  }
+}
+
 function initialConfig() {
   return {
     template: 'family', // 'family' | 'friends'
     orientation: 'portrait', // 'portrait' | 'landscape'
 
-    mainCaption: 'Trip to Goa',
-    date: 'June 2026',
-    secondaryCaption: 'The Solanki Family',
-    promoMessage: 'Created with love.\nMaking memories last forever.',
+    mainCaption: { text: 'Trip to Goa', x: undefined, y: undefined, scaleX: 1, scaleY: 1 },
+    date: { text: 'June 2026', x: undefined, y: undefined, scaleX: 1, scaleY: 1 },
+    secondaryCaption: { text: 'The Solanki Family', x: undefined, y: undefined, scaleX: 1, scaleY: 1 },
+    promoMessage: { text: 'Created with love.\nMaking memories last forever.', x: undefined, y: undefined, scaleX: 1, scaleY: 1 },
 
     background: {
       dataUrl: null,
@@ -65,7 +84,7 @@ export default function App() {
         quality: 0.95,
       })
       const link = document.createElement('a')
-      const safeName = (config.secondaryCaption || config.template || 'poster').replace(/[^a-z0-9]+/gi, '-')
+      const safeName = ((config.secondaryCaption?.text || config.secondaryCaption) || config.template || 'poster').replace(/[^a-z0-9]+/gi, '-')
       link.download = `${safeName}-${Date.now()}.${exportFormat === 'jpeg' ? 'jpg' : 'png'}`
       link.href = uri
       document.body.appendChild(link)
@@ -113,6 +132,10 @@ export default function App() {
       const activeY = isOldDefault ? undefined : logoVal.y
       return {
         ...parsed,
+        mainCaption: migrateTextProp(parsed.mainCaption, 'Trip to Goa', 0, 50),
+        date: migrateTextProp(parsed.date, 'June 2026', 0, 90),
+        secondaryCaption: migrateTextProp(parsed.secondaryCaption, 'The Solanki Family', 0, 120),
+        promoMessage: migrateTextProp(parsed.promoMessage, 'Created with love.\nMaking memories last forever.', 40, 1000),
         background: {
           ...(parsed.background || {}),
           dataUrl: bgVal !== null ? bgVal : (parsed.background?.dataUrl || null),

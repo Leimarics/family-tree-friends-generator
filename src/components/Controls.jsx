@@ -57,14 +57,28 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
         >
           Start Fresh (Clear Memory)
         </button>
+        <button
+          onClick={() => {
+            update({
+              mainCaption: { ...config.mainCaption, x: undefined, y: undefined },
+              date: { ...config.date, x: undefined, y: undefined },
+              secondaryCaption: { ...config.secondaryCaption, x: undefined, y: undefined },
+              promoMessage: { ...config.promoMessage, x: undefined, y: undefined },
+              logo: { ...config.logo, x: undefined, y: undefined }
+            })
+          }}
+          className="w-full mt-2 py-2 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors border border-dashed border-sky-500/30 text-sky-400 hover:bg-sky-500/10 hover:border-sky-500/50"
+        >
+          Reset Text Positions
+        </button>
       </Section>
 
       <Section title="Captions">
         <Field label="Main caption">
           <input
             type="text"
-            value={config.mainCaption}
-            onChange={(e) => update({ mainCaption: e.target.value })}
+            value={config.mainCaption?.text || ''}
+            onChange={(e) => update({ mainCaption: { ...config.mainCaption, text: e.target.value } })}
             placeholder="e.g. Trip to Goa"
             className="input"
           />
@@ -72,8 +86,8 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
         <Field label="Date">
           <input
             type="text"
-            value={config.date}
-            onChange={(e) => update({ date: e.target.value })}
+            value={config.date?.text || ''}
+            onChange={(e) => update({ date: { ...config.date, text: e.target.value } })}
             placeholder="e.g. June 2026"
             className="input"
           />
@@ -81,16 +95,16 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
         <Field label="Secondary caption">
           <input
             type="text"
-            value={config.secondaryCaption}
-            onChange={(e) => update({ secondaryCaption: e.target.value })}
+            value={config.secondaryCaption?.text || ''}
+            onChange={(e) => update({ secondaryCaption: { ...config.secondaryCaption, text: e.target.value } })}
             placeholder="e.g. The Solanki Family"
             className="input"
           />
         </Field>
         <Field label="Promo message (bottom, 2-3 lines)">
           <textarea
-            value={config.promoMessage}
-            onChange={(e) => update({ promoMessage: e.target.value })}
+            value={config.promoMessage?.text || ''}
+            onChange={(e) => update({ promoMessage: { ...config.promoMessage, text: e.target.value } })}
             rows={3}
             className="input resize-none"
           />
