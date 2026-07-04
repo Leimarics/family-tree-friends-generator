@@ -166,6 +166,8 @@ export function makeSlot(label = '') {
     id: (crypto.randomUUID && crypto.randomUUID()) || `slot-${Date.now()}-${Math.random()}`,
     label,
     dataUrl: null,
+    opacity: 100,
+    brightness: 0,
   }
 }
 

@@ -12,7 +12,7 @@ import Konva from 'konva'
  * so we clip a Group instead -- that's the reliable way to get custom avatar
  * shapes that still export cleanly to PNG/JPEG.
  */
-export default function AvatarNode({ x, y, size, label, dataUrl, darken, darkenAmount = -45, shape = 'circle' }) {
+export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, brightness = 0, shape = 'circle' }) {
   const [image] = useImage(dataUrl || undefined, 'anonymous')
   const imgRef = useRef(null)
 
@@ -33,10 +33,11 @@ export default function AvatarNode({ x, y, size, label, dataUrl, darken, darkenA
   // settings change, otherwise Konva just ignores them silently.
   useEffect(() => {
     if (image && imgRef.current) {
+      imgRef.current.clearCache()
       imgRef.current.cache()
       imgRef.current.getLayer()?.batchDraw()
     }
-  }, [image, darken, darkenAmount])
+  }, [image, opacity, brightness])
 
   const clipFunc = (ctx) => {
     if (shape === 'square') {
@@ -156,9 +157,9 @@ export default function AvatarNode({ x, y, size, label, dataUrl, darken, darkenA
             crop={crop}
             width={size}
             height={size}
-            filters={darken ? [Konva.Filters.Brighten, Konva.Filters.Contrast] : []}
-            brightness={darken ? darkenAmount / 100 : 0}
-            contrast={darken ? 15 : 0}
+            opacity={opacity / 100}
+            filters={brightness !== 0 ? [Konva.Filters.Brighten] : []}
+            brightness={brightness / 100}
           />
         </Group>
       ) : (
