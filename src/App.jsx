@@ -39,7 +39,7 @@ function initialConfig() {
       brightness: 0,
     },
 
-    darkenAllAvatars: false,
+
 
     frame: {
       enabled: false,
@@ -148,8 +148,29 @@ export default function App() {
           scaleX: logoVal.scaleX !== undefined ? logoVal.scaleX : 1,
           scaleY: logoVal.scaleY !== undefined ? logoVal.scaleY : 1,
         },
-        family: avatarsVal ? avatarsVal.family : (parsed.family || defaultFamily()),
-        friends: avatarsVal ? avatarsVal.friends : (parsed.friends || defaultFriends()),
+        family: (() => {
+          const rawFamily = avatarsVal ? avatarsVal.family : (parsed.family || defaultFamily())
+          const cleanFamily = {}
+          for (const key in rawFamily) {
+            cleanFamily[key] = (rawFamily[key] || []).map(slot => ({
+              ...slot,
+              opacity: slot.opacity !== undefined ? slot.opacity : 100,
+              brightness: slot.brightness !== undefined ? slot.brightness : 0,
+            }))
+          }
+          return cleanFamily
+        })(),
+        friends: (() => {
+          const rawFriends = avatarsVal ? avatarsVal.friends : (parsed.friends || defaultFriends())
+          return {
+            ...rawFriends,
+            list: (rawFriends.list || []).map(slot => ({
+              ...slot,
+              opacity: slot.opacity !== undefined ? slot.opacity : 100,
+              brightness: slot.brightness !== undefined ? slot.brightness : 0,
+            }))
+          }
+        })(),
       }
     } catch (e) {
       console.error(e)

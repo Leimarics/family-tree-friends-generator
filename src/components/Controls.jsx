@@ -156,18 +156,6 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
         />
       </Section>
 
-      <Section title="Avatar fix-up">
-        <p className="text-xs text-gray-400 mb-2">
-          Uploaded avatars sometimes render with inconsistent contrast. Toggle this to apply a
-          uniform darken filter across every avatar at once.
-        </p>
-        <ToggleRow
-          icon={<Moon size={16} />}
-          label="Mark all avatars dark"
-          checked={config.darkenAllAvatars}
-          onChange={(v) => update({ darkenAllAvatars: v })}
-        />
-      </Section>
 
       <Section title="Photo frame border">
         <ToggleRow
@@ -420,6 +408,8 @@ function AvatarGroupEditor({ title, hint, list, max, onChange, freeLabel, autoLa
           autoLabel={autoLabel}
           onLabelChange={(label) => updateSlot(slot.id, { label })}
           onShapeChange={(shape) => updateSlot(slot.id, { shape })}
+          onOpacityChange={(opacity) => updateSlot(slot.id, { opacity })}
+          onBrightnessChange={(brightness) => updateSlot(slot.id, { brightness })}
           onFile={async (file) => {
             const dataUrl = await fileToDataUrl(file)
             updateSlot(slot.id, { dataUrl })
@@ -438,13 +428,28 @@ function AvatarGroupEditor({ title, hint, list, max, onChange, freeLabel, autoLa
   )
 }
 
-function AvatarSlotRow({ slot, index, editableLabel, freeLabel, autoLabel, onLabelChange, onShapeChange, onFile, onRemove }) {
+function AvatarSlotRow({
+  slot,
+  index,
+  editableLabel,
+  freeLabel,
+  autoLabel,
+  onLabelChange,
+  onShapeChange,
+  onOpacityChange,
+  onBrightnessChange,
+  onFile,
+  onRemove
+}) {
   const inputRef = useRef(null)
   const placeholderText = freeLabel
     ? 'e.g. Uncle, Grandma…'
     : autoLabel
     ? autoLabel(index)
     : `Item #${index + 1}`
+
+  const opacityVal = slot.opacity ?? 100
+  const brightnessVal = slot.brightness ?? 0
 
   return (
     <div className="flex flex-col gap-1.5 bg-panel2 border border-line rounded-md p-2">
@@ -501,6 +506,38 @@ function AvatarSlotRow({ slot, index, editableLabel, freeLabel, autoLabel, onLab
           <option value="rounded">Rounded Square</option>
           <option value="oval">Oval</option>
         </select>
+      </div>
+
+      <div className="pl-[52px] mt-1">
+        <div className="flex justify-between text-xs text-gray-400 mb-1">
+          <span>Opacity</span>
+          <span>{opacityVal}%</span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="5"
+          value={opacityVal}
+          onChange={(e) => onOpacityChange(parseInt(e.target.value, 10))}
+          className="w-full"
+        />
+      </div>
+
+      <div className="pl-[52px] mt-1">
+        <div className="flex justify-between text-xs text-gray-400 mb-1">
+          <span>Brightness</span>
+          <span>{brightnessVal}</span>
+        </div>
+        <input
+          type="range"
+          min="-100"
+          max="100"
+          step="5"
+          value={brightnessVal}
+          onChange={(e) => onBrightnessChange(parseInt(e.target.value, 10))}
+          className="w-full"
+        />
       </div>
     </div>
   )
