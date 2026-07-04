@@ -3,7 +3,7 @@ import { Plus, Trash2, Upload, Moon, Image as ImageIcon, Frame as FrameIcon, Dow
 import { fileToDataUrl, isImageFile } from '../utils/fileToDataUrl'
 import { GROUP_LIMITS, makeSlot } from '../utils/gridLayouts'
 
-export default function Controls({ config, setConfig, exportFormat, setExportFormat, isExporting, handleExport }) {
+export default function Controls({ config, setConfig, exportFormat, setExportFormat, isExporting, handleExport, selectedId, setSelectedId }) {
   const update = (patch) => setConfig((prev) => ({ ...prev, ...patch }))
 
   const updateFamilyGroup = (groupKey, nextList) =>
@@ -12,12 +12,136 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
   const updateFriends = (nextList) =>
     setConfig((prev) => ({ ...prev, friends: { ...prev.friends, list: nextList } }))
 
+  const handleTextFormatChange = (property, value) => {
+    const isMainCaption = ['mainCaption', 'date', 'secondaryCaption', 'promoMessage'].includes(selectedId)
+    if (isMainCaption) {
+      setConfig((prev) => ({
+        ...prev,
+        [selectedId]: {
+          ...prev[selectedId],
+          [property]: value,
+        },
+      }))
+      return
+    }
+
+    // Otherwise, check if it is an avatar in family
+    let found = false
+    const familyKeys = ['parents', 'relatives', 'children']
+    for (const key of familyKeys) {
+      const list = config.family[key] || []
+      if (list.some((item) => item.id === selectedId)) {
+        const nextList = list.map((item) => (item.id === selectedId ? { ...item, [property]: value } : item))
+        updateFamilyGroup(key, nextList)
+        found = true
+        break
+      }
+    }
+
+    if (!found) {
+      const friendsList = config.friends.list || []
+      if (friendsList.some((item) => item.id === selectedId)) {
+        const nextList = friendsList.map((item) => (item.id === selectedId ? { ...item, [property]: value } : item))
+        updateFriends(nextList)
+      }
+    }
+  }
+
+  const getSelectedTextSettings = (id) => {
+    if (!id) return null
+    if (['mainCaption', 'date', 'secondaryCaption', 'promoMessage'].includes(id)) {
+      return config[id]
+    }
+    // Find avatar
+    const familyKeys = ['parents', 'relatives', 'children']
+    for (const key of familyKeys) {
+      const list = config.family[key] || []
+      const item = list.find((item) => item.id === id)
+      if (item) return item
+    }
+    const friendsList = config.friends.list || []
+    const item = friendsList.find((item) => item.id === id)
+    if (item) return item
+    return null
+  }
+
+  const normalizeHexColor = (color) => {
+    if (!color) return '#000000'
+    if (/^#[0-9A-Ff]{3}$/.test(color)) {
+      return '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3]
+    }
+    if (!color.startsWith('#')) {
+      color = '#' + color
+    }
+    if (color.length === 7) {
+      return color
+    }
+    return '#000000'
+  }
+
+  const selectedTextSettings = getSelectedTextSettings(selectedId)
+  const isAvatarSelected = selectedId && !['mainCaption', 'date', 'secondaryCaption', 'promoMessage', 'logo'].includes(selectedId)
+  const selectedAvatar = isAvatarSelected ? selectedTextSettings : null
+
   return (
     <div className="flex flex-col gap-7">
       <div>
         <h1 className="text-xl font-semibold text-white">Poster Generator</h1>
         <p className="text-sm text-gray-400 mt-1">Family Tree &amp; Friends&apos; Frenzy layouts</p>
       </div>
+
+      {selectedTextSettings && (
+        <Section title="Text Formatting">
+          <p className="text-xs text-gray-400 mb-3">
+            Format the selected text label:
+          </p>
+          <div className="flex flex-col gap-3">
+            <Field label="Font Family">
+              <select
+                value={selectedTextSettings.fontFamily || 'Arial'}
+                onChange={(e) => handleTextFormatChange('fontFamily', e.target.value)}
+                className="bg-[#1F2430] border border-line rounded-md px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-accent w-full"
+              >
+                <option value="Arial">Arial</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Courier New">Courier New</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Verdana">Verdana</option>
+                <option value="Trebuchet MS">Trebuchet MS</option>
+                <option value="Impact">Impact</option>
+                <option value="Comic Sans MS">Comic Sans MS</option>
+                <option value="Palatino">Palatino</option>
+                <option value="Lucida Sans">Lucida Sans</option>
+              </select>
+            </Field>
+
+            <Field label="Font Size">
+              <input
+                type="number"
+                value={selectedTextSettings.fontSize || 30}
+                onChange={(e) => handleTextFormatChange('fontSize', parseInt(e.target.value, 10) || 0)}
+                className="input w-full"
+                min="8"
+                max="150"
+              />
+            </Field>
+
+            <Field label="Text Color">
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={normalizeHexColor(isAvatarSelected ? (selectedAvatar?.fill || '#000000') : (config[selectedId]?.fill || '#000000'))}
+                  onChange={(e) => handleTextFormatChange('fill', e.target.value)}
+                  className="h-10 w-full rounded-md border border-line bg-panel2 cursor-pointer"
+                />
+                <span className="text-xs text-gray-400 font-mono shrink-0 uppercase">
+                  {isAvatarSelected ? (selectedAvatar?.fill || '#000000') : (config[selectedId]?.fill || '#000000')}
+                </span>
+              </div>
+            </Field>
+          </div>
+        </Section>
+      )}
 
       <Section title="Layout">
         <div className="flex gap-2 mb-3">

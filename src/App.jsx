@@ -4,12 +4,30 @@ import CanvasPreview from './components/CanvasPreview'
 import { defaultFamily, defaultFriends } from './utils/gridLayouts'
 import { Menu, X } from 'lucide-react'
 
-function migrateTextProp(val, defaultText, defaultX, defaultY) {
+function migrateTextProp(val, defaultText, defaultFontFamily, defaultFontSize, defaultFill) {
   if (!val) {
-    return { text: defaultText, x: undefined, y: undefined, scaleX: 1, scaleY: 1 }
+    return {
+      text: defaultText,
+      x: undefined,
+      y: undefined,
+      scaleX: 1,
+      scaleY: 1,
+      fontFamily: defaultFontFamily,
+      fontSize: defaultFontSize,
+      fill: defaultFill,
+    }
   }
   if (typeof val === 'string') {
-    return { text: val, x: undefined, y: undefined, scaleX: 1, scaleY: 1 }
+    return {
+      text: val,
+      x: undefined,
+      y: undefined,
+      scaleX: 1,
+      scaleY: 1,
+      fontFamily: defaultFontFamily,
+      fontSize: defaultFontSize,
+      fill: defaultFill,
+    }
   }
   // Reset legacy hardcoded defaults to undefined so they compute dynamically
   const isLegacyX = val.x === 0 || val.x === 40
@@ -20,6 +38,9 @@ function migrateTextProp(val, defaultText, defaultX, defaultY) {
     y: (val.y !== undefined && !isLegacyY) ? val.y : undefined,
     scaleX: val.scaleX !== undefined ? val.scaleX : 1,
     scaleY: val.scaleY !== undefined ? val.scaleY : 1,
+    fontFamily: val.fontFamily !== undefined ? val.fontFamily : defaultFontFamily,
+    fontSize: val.fontSize !== undefined ? val.fontSize : defaultFontSize,
+    fill: val.fill !== undefined ? val.fill : defaultFill,
   }
 }
 
@@ -28,10 +49,10 @@ function initialConfig() {
     template: 'family', // 'family' | 'friends'
     orientation: 'portrait', // 'portrait' | 'landscape'
 
-    mainCaption: { text: 'Trip to Goa', x: undefined, y: undefined, scaleX: 1, scaleY: 1 },
-    date: { text: 'June 2026', x: undefined, y: undefined, scaleX: 1, scaleY: 1 },
-    secondaryCaption: { text: 'The Solanki Family', x: undefined, y: undefined, scaleX: 1, scaleY: 1 },
-    promoMessage: { text: 'Created with love.\nMaking memories last forever.', x: undefined, y: undefined, scaleX: 1, scaleY: 1 },
+    mainCaption: { text: 'Trip to Goa', x: undefined, y: undefined, scaleX: 1, scaleY: 1, fontFamily: 'Arial', fontSize: 40, fill: '#1A1A1A' },
+    date: { text: 'June 2026', x: undefined, y: undefined, scaleX: 1, scaleY: 1, fontFamily: 'Arial', fontSize: 20, fill: '#5A5A5A' },
+    secondaryCaption: { text: 'The Solanki Family', x: undefined, y: undefined, scaleX: 1, scaleY: 1, fontFamily: 'Arial', fontSize: 30, fill: '#2E2E2E' },
+    promoMessage: { text: 'Created with love.\nMaking memories last forever.', x: undefined, y: undefined, scaleX: 1, scaleY: 1, fontFamily: 'Arial', fontSize: 20, fill: '#444444' },
 
     background: {
       dataUrl: null,
@@ -72,6 +93,7 @@ export default function App() {
   const stageRef = useRef(null)
   const [exportFormat, setExportFormat] = useState('png')
   const [isExporting, setIsExporting] = useState(false)
+  const [selectedId, setSelectedId] = useState(null)
 
   const handleExport = () => {
     setIsExporting(true)
@@ -132,10 +154,10 @@ export default function App() {
       const activeY = isOldDefault ? undefined : logoVal.y
       return {
         ...parsed,
-        mainCaption: migrateTextProp(parsed.mainCaption, 'Trip to Goa', 0, 50),
-        date: migrateTextProp(parsed.date, 'June 2026', 0, 90),
-        secondaryCaption: migrateTextProp(parsed.secondaryCaption, 'The Solanki Family', 0, 120),
-        promoMessage: migrateTextProp(parsed.promoMessage, 'Created with love.\nMaking memories last forever.', 40, 1000),
+        mainCaption: migrateTextProp(parsed.mainCaption, 'Trip to Goa', 'Arial', 40, '#1A1A1A'),
+        date: migrateTextProp(parsed.date, 'June 2026', 'Arial', 20, '#5A5A5A'),
+        secondaryCaption: migrateTextProp(parsed.secondaryCaption, 'The Solanki Family', 'Arial', 30, '#2E2E2E'),
+        promoMessage: migrateTextProp(parsed.promoMessage, 'Created with love.\nMaking memories last forever.', 'Arial', 20, '#444444'),
         background: {
           ...(parsed.background || {}),
           dataUrl: bgVal !== null ? bgVal : (parsed.background?.dataUrl || null),
@@ -156,6 +178,9 @@ export default function App() {
               ...slot,
               opacity: slot.opacity !== undefined ? slot.opacity : 100,
               brightness: slot.brightness !== undefined ? slot.brightness : 0,
+              fontFamily: slot.fontFamily !== undefined ? slot.fontFamily : 'Arial',
+              fontSize: slot.fontSize !== undefined ? slot.fontSize : 16,
+              fill: slot.fill !== undefined ? slot.fill : '#2A2A2A',
             }))
           }
           return cleanFamily
@@ -168,6 +193,9 @@ export default function App() {
               ...slot,
               opacity: slot.opacity !== undefined ? slot.opacity : 100,
               brightness: slot.brightness !== undefined ? slot.brightness : 0,
+              fontFamily: slot.fontFamily !== undefined ? slot.fontFamily : 'Arial',
+              fontSize: slot.fontSize !== undefined ? slot.fontSize : 16,
+              fill: slot.fill !== undefined ? slot.fill : '#2A2A2A',
             }))
           }
         })(),
@@ -241,6 +269,8 @@ export default function App() {
           setExportFormat={setExportFormat}
           isExporting={isExporting}
           handleExport={handleExport}
+          selectedId={selectedId}
+          setSelectedId={setSelectedId}
         />
       </div>
 
@@ -256,7 +286,7 @@ export default function App() {
         </button>
 
         <div className="flex-1 h-full pt-10 md:pt-12">
-          <CanvasPreview config={config} setConfig={setConfig} stageRef={stageRef} />
+          <CanvasPreview config={config} setConfig={setConfig} stageRef={stageRef} selectedId={selectedId} selectShape={setSelectedId} />
         </div>
       </div>
     </div>

@@ -6,12 +6,18 @@ import { computeLayout } from '../utils/gridLayouts'
 import AvatarNode from './AvatarNode'
 import { Plus, Minus } from 'lucide-react'
 
-export default function CanvasPreview({ config, setConfig, stageRef }) {
+export default function CanvasPreview({ config, setConfig, stageRef, selectedId, selectShape }) {
   const wrapperRef = useRef(null)
   const [autoScale, setAutoScale] = useState(1)
   const [zoomMode, setZoomMode] = useState('fit')
   const [manualZoom, setManualZoom] = useState(1)
-  const [selectedId, selectShape] = useState(null)
+
+  const checkDeselect = (e) => {
+    const clickedOnEmpty = e.target === e.target.getStage() || e.target.name() === 'background'
+    if (clickedOnEmpty) {
+      selectShape(null)
+    }
+  }
 
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 })
@@ -195,16 +201,8 @@ export default function CanvasPreview({ config, setConfig, stageRef }) {
               width={canvasWidth}
               height={canvasHeight}
               ref={stageRef}
-              onMouseDown={(e) => {
-                if (e.target === e.target.getStage()) {
-                  selectShape(null)
-                }
-              }}
-              onTouchStart={(e) => {
-                if (e.target === e.target.getStage()) {
-                  selectShape(null)
-                }
-              }}
+              onMouseDown={checkDeselect}
+              onTouchStart={checkDeselect}
             >
               <PosterLayer
                 config={config}
@@ -401,11 +399,12 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
   return (
     <Layer>
       {/* Base fill so transparent PNGs / no-background-uploaded states still export clean */}
-      <Rect width={canvasWidth} height={canvasHeight} fill="#FFFFFF" />
+      <Rect name="background" width={canvasWidth} height={canvasHeight} fill="#FFFFFF" />
 
       {bgImage && (
         <KonvaImage
           ref={bgRef}
+          name="background"
           image={bgImage}
           width={canvasWidth}
           height={canvasHeight}
@@ -425,10 +424,10 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
         scaleY={config.mainCaption.scaleY || 1}
         width={canvasWidth}
         align="center"
-        fontSize={header.mainSize}
-        fontFamily="Inter, Arial, sans-serif"
+        fontSize={config.mainCaption.fontSize || 40}
+        fontFamily={config.mainCaption.fontFamily || 'Arial'}
         fontStyle="700"
-        fill="#1A1A1A"
+        fill={config.mainCaption.fill || '#1A1A1A'}
         draggable
         onClick={() => selectShape('mainCaption')}
         onTap={() => selectShape('mainCaption')}
@@ -455,9 +454,9 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
         scaleY={config.date.scaleY || 1}
         width={canvasWidth}
         align="center"
-        fontSize={header.dateSize}
-        fontFamily="Inter, Arial, sans-serif"
-        fill="#5A5A5A"
+        fontSize={config.date.fontSize || 20}
+        fontFamily={config.date.fontFamily || 'Arial'}
+        fill={config.date.fill || '#5A5A5A'}
         draggable
         onClick={() => selectShape('date')}
         onTap={() => selectShape('date')}
@@ -484,10 +483,10 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
         scaleY={config.secondaryCaption.scaleY || 1}
         width={canvasWidth}
         align="center"
-        fontSize={header.subSize}
-        fontFamily="Georgia, serif"
+        fontSize={config.secondaryCaption.fontSize || 30}
+        fontFamily={config.secondaryCaption.fontFamily || 'Arial'}
         fontStyle="italic"
-        fill="#2E2E2E"
+        fill={config.secondaryCaption.fill || '#2E2E2E'}
         draggable
         onClick={() => selectShape('secondaryCaption')}
         onTap={() => selectShape('secondaryCaption')}
@@ -559,6 +558,9 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
               dataUrl={slot.dataUrl}
               opacity={slot.opacity !== undefined ? slot.opacity : 100}
               brightness={slot.brightness !== undefined ? slot.brightness : 0}
+              fontFamily={slot.fontFamily || 'Arial'}
+              fontSize={slot.fontSize || 16}
+              fill={slot.fill || '#2A2A2A'}
               shape={slot.shape || 'circle'}
             />
           </Group>
@@ -575,9 +577,9 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
         scaleY={config.promoMessage.scaleY || 1}
         width={canvasWidth - 80}
         align="center"
-        fontSize={promoSize}
-        fontFamily="Inter, Arial, sans-serif"
-        fill="#444444"
+        fontSize={config.promoMessage.fontSize || 20}
+        fontFamily={config.promoMessage.fontFamily || 'Arial'}
+        fill={config.promoMessage.fill || '#444444'}
         lineHeight={1.4}
         draggable
         onClick={() => selectShape('promoMessage')}
