@@ -12,7 +12,7 @@ import Konva from 'konva'
  * so we clip a Group instead -- that's the reliable way to get custom avatar
  * shapes that still export cleanly to PNG/JPEG.
  */
-export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, brightness = 0, shape = 'circle' }) {
+export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, brightness = 0, fontFamily = 'Arial', fontSize = 16, fill = '#2A2A2A', shape = 'circle' }) {
   const [image] = useImage(dataUrl || undefined, 'anonymous')
   const imgRef = useRef(null)
 
@@ -175,9 +175,9 @@ export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, 
           y={labelY}
           width={size + 40}
           align="center"
-          fontSize={Math.max(14, size * 0.13)}
-          fontFamily="Inter, Arial, sans-serif"
-          fill="#2A2A2A"
+          fontSize={fontSize}
+          fontFamily={fontFamily}
+          fill={fill || '#2A2A2A'}
         />
       ) : null}
     </Group>

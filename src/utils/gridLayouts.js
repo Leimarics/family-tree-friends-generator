@@ -168,6 +168,9 @@ export function makeSlot(label = '') {
     dataUrl: null,
     opacity: 100,
     brightness: 0,
+    fontFamily: 'Arial',
+    fontSize: 16,
+    fill: '#2A2A2A',
   }
 }
 
