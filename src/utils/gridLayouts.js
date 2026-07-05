@@ -123,7 +123,7 @@ export function computeLayout(config) {
       labelSpace: t.labelSpace,
     })
     list.forEach((slot, i) => {
-      avatarSlots.push({ ...slot, ...pos[i] })
+      avatarSlots.push({ ...slot, ...pos[i], category: 'friends' })
     })
   } else {
     const groups = [
@@ -144,7 +144,7 @@ export function computeLayout(config) {
         labelSpace: t.labelSpace,
       })
       list.forEach((slot, i) => {
-        avatarSlots.push({ ...slot, ...pos[i] })
+        avatarSlots.push({ ...slot, ...pos[i], category: key })
       })
     })
   }
@@ -166,6 +166,13 @@ export function makeSlot(label = '') {
     id: (crypto.randomUUID && crypto.randomUUID()) || `slot-${Date.now()}-${Math.random()}`,
     label,
     dataUrl: null,
+    opacity: 100,
+    brightness: 0,
+    fontFamily: 'Arial',
+    fontSize: 16,
+    fill: '#2A2A2A',
+    stroke: '#000000',
+    fillEnabled: true,
   }
 }
 

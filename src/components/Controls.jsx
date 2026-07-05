@@ -3,7 +3,21 @@ import { Plus, Trash2, Upload, Moon, Image as ImageIcon, Frame as FrameIcon, Dow
 import { fileToDataUrl, isImageFile } from '../utils/fileToDataUrl'
 import { GROUP_LIMITS, makeSlot } from '../utils/gridLayouts'
 
-export default function Controls({ config, setConfig, exportFormat, setExportFormat, isExporting, handleExport }) {
+const normalizeHexColor = (color) => {
+  if (!color) return '#000000'
+  if (/^#[0-9A-Ff]{3}$/.test(color)) {
+    return '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3]
+  }
+  if (!color.startsWith('#')) {
+    color = '#' + color
+  }
+  if (color.length === 7) {
+    return color
+  }
+  return '#000000'
+}
+
+export default function Controls({ config, setConfig, exportFormat, setExportFormat, isExporting, handleExport, selectedId, setSelectedId }) {
   const update = (patch) => setConfig((prev) => ({ ...prev, ...patch }))
 
   const updateFamilyGroup = (groupKey, nextList) =>
@@ -12,12 +26,134 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
   const updateFriends = (nextList) =>
     setConfig((prev) => ({ ...prev, friends: { ...prev.friends, list: nextList } }))
 
+  const handleTextFormatChange = (property, value) => {
+    const isMainCaption = ['mainCaption', 'date', 'secondaryCaption', 'promoMessage'].includes(selectedId)
+    if (isMainCaption) {
+      setConfig((prev) => ({
+        ...prev,
+        [selectedId]: {
+          ...prev[selectedId],
+          [property]: value,
+        },
+      }))
+      return
+    }
+
+    // Otherwise, check if it is an avatar in family
+    let found = false
+    const familyKeys = ['parents', 'relatives', 'children']
+    for (const key of familyKeys) {
+      const list = config.family[key] || []
+      if (list.some((item) => item.id === selectedId)) {
+        const nextList = list.map((item) => (item.id === selectedId ? { ...item, [property]: value } : item))
+        updateFamilyGroup(key, nextList)
+        found = true
+        break
+      }
+    }
+
+    if (!found) {
+      const friendsList = config.friends.list || []
+      if (friendsList.some((item) => item.id === selectedId)) {
+        const nextList = friendsList.map((item) => (item.id === selectedId ? { ...item, [property]: value } : item))
+        updateFriends(nextList)
+      }
+    }
+  }
+
+  const getSelectedTextSettings = (id) => {
+    if (!id) return null
+    if (['mainCaption', 'date', 'secondaryCaption', 'promoMessage'].includes(id)) {
+      return config[id]
+    }
+    // Find avatar
+    const familyKeys = ['parents', 'relatives', 'children']
+    for (const key of familyKeys) {
+      const list = config.family[key] || []
+      const item = list.find((item) => item.id === id)
+      if (item) return item
+    }
+    const friendsList = config.friends.list || []
+    const item = friendsList.find((item) => item.id === id)
+    if (item) return item
+    return null
+  }
+
+
+
+  const selectedTextSettings = getSelectedTextSettings(selectedId)
+  const isAvatarSelected = selectedId && !['mainCaption', 'date', 'secondaryCaption', 'promoMessage', 'logo'].includes(selectedId)
+  const selectedAvatar = isAvatarSelected ? selectedTextSettings : null
+
   return (
     <div className="flex flex-col gap-7">
       <div>
-        <h1 className="text-xl font-semibold text-white">Poster Generator</h1>
+        <div className="flex items-baseline gap-2">
+          <h1 className="text-xl font-semibold text-white">Poster Generator</h1>
+          <a
+            href="https://www.leimarics.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-gray-400 hover:text-white transition-colors font-medium"
+          >
+            by Leimarics
+          </a>
+        </div>
         <p className="text-sm text-gray-400 mt-1">Family Tree &amp; Friends&apos; Frenzy layouts</p>
       </div>
+
+      {selectedTextSettings && (
+        <Section title="Text Formatting">
+          <p className="text-xs text-gray-400 mb-3">
+            Format the selected text label:
+          </p>
+          <div className="flex flex-col gap-3">
+            <Field label="Font Family">
+              <select
+                value={selectedTextSettings.fontFamily || 'Arial'}
+                onChange={(e) => handleTextFormatChange('fontFamily', e.target.value)}
+                className="bg-[#1F2430] border border-line rounded-md px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-accent w-full"
+              >
+                <option value="Arial">Arial</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Courier New">Courier New</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Verdana">Verdana</option>
+                <option value="Trebuchet MS">Trebuchet MS</option>
+                <option value="Impact">Impact</option>
+                <option value="Great Vibes">Great Vibes</option>
+                <option value="Palatino">Palatino</option>
+                <option value="Lucida Sans">Lucida Sans</option>
+              </select>
+            </Field>
+
+            <Field label="Font Size">
+              <input
+                type="number"
+                value={selectedTextSettings.fontSize || 30}
+                onChange={(e) => handleTextFormatChange('fontSize', parseInt(e.target.value, 10) || 0)}
+                className="input w-full"
+                min="8"
+                max="150"
+              />
+            </Field>
+
+            <Field label="Text Color">
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={normalizeHexColor(isAvatarSelected ? (selectedAvatar?.fill || '#000000') : (config[selectedId]?.fill || '#000000'))}
+                  onChange={(e) => handleTextFormatChange('fill', e.target.value)}
+                  className="h-10 w-full rounded-md border border-line bg-panel2 cursor-pointer"
+                />
+                <span className="text-xs text-gray-400 font-mono shrink-0 uppercase">
+                  {isAvatarSelected ? (selectedAvatar?.fill || '#000000') : (config[selectedId]?.fill || '#000000')}
+                </span>
+              </div>
+            </Field>
+          </div>
+        </Section>
+      )}
 
       <Section title="Layout">
         <div className="flex gap-2 mb-3">
@@ -57,14 +193,37 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
         >
           Start Fresh (Clear Memory)
         </button>
+        <button
+          onClick={() => {
+            update({
+              mainCaption: { ...config.mainCaption, x: undefined, y: undefined, scaleX: undefined, scaleY: undefined },
+              date: { ...config.date, x: undefined, y: undefined, scaleX: undefined, scaleY: undefined },
+              secondaryCaption: { ...config.secondaryCaption, x: undefined, y: undefined, scaleX: undefined, scaleY: undefined },
+              promoMessage: { ...config.promoMessage, x: undefined, y: undefined, scaleX: undefined, scaleY: undefined },
+              logo: { ...config.logo, x: undefined, y: undefined, scaleX: undefined, scaleY: undefined },
+              family: {
+                parents: config.family.parents.map(a => ({ ...a, customX: undefined, customY: undefined, scaleX: undefined, scaleY: undefined })),
+                relatives: config.family.relatives.map(a => ({ ...a, customX: undefined, customY: undefined, scaleX: undefined, scaleY: undefined })),
+                children: config.family.children.map(a => ({ ...a, customX: undefined, customY: undefined, scaleX: undefined, scaleY: undefined })),
+              },
+              friends: {
+                ...config.friends,
+                list: config.friends.list.map(a => ({ ...a, customX: undefined, customY: undefined, scaleX: undefined, scaleY: undefined })),
+              }
+            })
+          }}
+          className="w-full mt-2 py-2 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors border border-dashed border-sky-500/30 text-sky-400 hover:bg-sky-500/10 hover:border-sky-500/50"
+        >
+          Reset Custom Positions
+        </button>
       </Section>
 
       <Section title="Captions">
         <Field label="Main caption">
           <input
             type="text"
-            value={config.mainCaption}
-            onChange={(e) => update({ mainCaption: e.target.value })}
+            value={config.mainCaption?.text || ''}
+            onChange={(e) => update({ mainCaption: { ...config.mainCaption, text: e.target.value } })}
             placeholder="e.g. Trip to Goa"
             className="input"
           />
@@ -72,8 +231,8 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
         <Field label="Date">
           <input
             type="text"
-            value={config.date}
-            onChange={(e) => update({ date: e.target.value })}
+            value={config.date?.text || ''}
+            onChange={(e) => update({ date: { ...config.date, text: e.target.value } })}
             placeholder="e.g. June 2026"
             className="input"
           />
@@ -81,16 +240,16 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
         <Field label="Secondary caption">
           <input
             type="text"
-            value={config.secondaryCaption}
-            onChange={(e) => update({ secondaryCaption: e.target.value })}
+            value={config.secondaryCaption?.text || ''}
+            onChange={(e) => update({ secondaryCaption: { ...config.secondaryCaption, text: e.target.value } })}
             placeholder="e.g. The Solanki Family"
             className="input"
           />
         </Field>
         <Field label="Promo message (bottom, 2-3 lines)">
           <textarea
-            value={config.promoMessage}
-            onChange={(e) => update({ promoMessage: e.target.value })}
+            value={config.promoMessage?.text || ''}
+            onChange={(e) => update({ promoMessage: { ...config.promoMessage, text: e.target.value } })}
             rows={3}
             className="input resize-none"
           />
@@ -133,18 +292,6 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
         />
       </Section>
 
-      <Section title="Avatar fix-up">
-        <p className="text-xs text-gray-400 mb-2">
-          Uploaded avatars sometimes render with inconsistent contrast. Toggle this to apply a
-          uniform darken filter across every avatar at once.
-        </p>
-        <ToggleRow
-          icon={<Moon size={16} />}
-          label="Mark all avatars dark"
-          checked={config.darkenAllAvatars}
-          onChange={(v) => update({ darkenAllAvatars: v })}
-        />
-      </Section>
 
       <Section title="Photo frame border">
         <ToggleRow
@@ -260,6 +407,18 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
           </button>
         </div>
       </Section>
+
+      <div className="text-xs text-gray-500 mt-8 mb-4 text-center">
+        Powered by{' '}
+        <a
+          href="https://www.leimarics.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-bold text-gray-400 hover:text-white transition-colors"
+        >
+          Leimarics
+        </a>
+      </div>
     </div>
   )
 }
@@ -396,6 +555,11 @@ function AvatarGroupEditor({ title, hint, list, max, onChange, freeLabel, autoLa
           editableLabel={true}
           autoLabel={autoLabel}
           onLabelChange={(label) => updateSlot(slot.id, { label })}
+          onShapeChange={(shape) => updateSlot(slot.id, { shape })}
+          onOpacityChange={(opacity) => updateSlot(slot.id, { opacity })}
+          onBrightnessChange={(brightness) => updateSlot(slot.id, { brightness })}
+          onStrokeChange={(stroke) => updateSlot(slot.id, { stroke })}
+          onFillEnabledChange={(fillEnabled) => updateSlot(slot.id, { fillEnabled })}
           onFile={async (file) => {
             const dataUrl = await fileToDataUrl(file)
             updateSlot(slot.id, { dataUrl })
@@ -414,7 +578,21 @@ function AvatarGroupEditor({ title, hint, list, max, onChange, freeLabel, autoLa
   )
 }
 
-function AvatarSlotRow({ slot, index, editableLabel, freeLabel, autoLabel, onLabelChange, onFile, onRemove }) {
+function AvatarSlotRow({
+  slot,
+  index,
+  editableLabel,
+  freeLabel,
+  autoLabel,
+  onLabelChange,
+  onShapeChange,
+  onOpacityChange,
+  onBrightnessChange,
+  onStrokeChange,
+  onFillEnabledChange,
+  onFile,
+  onRemove
+}) {
   const inputRef = useRef(null)
   const placeholderText = freeLabel
     ? 'e.g. Uncle, Grandma…'
@@ -422,46 +600,124 @@ function AvatarSlotRow({ slot, index, editableLabel, freeLabel, autoLabel, onLab
     ? autoLabel(index)
     : `Item #${index + 1}`
 
+  const opacityVal = slot.opacity ?? 100
+  const brightnessVal = slot.brightness ?? 0
+
   return (
-    <div className="flex items-center gap-2 bg-panel2 border border-line rounded-md p-2">
-      <button
-        onClick={() => inputRef.current?.click()}
-        className="w-11 h-11 rounded-full border border-line flex items-center justify-center overflow-hidden shrink-0 bg-[#1A1D24]"
-        title="Upload avatar"
-      >
-        {slot.dataUrl ? (
-          <img src={slot.dataUrl} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <ImageIcon size={16} className="text-gray-500" />
-        )}
-      </button>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
-          if (file && isImageFile(file)) onFile(file)
-          e.target.value = ''
-        }}
-      />
-
-      {editableLabel ? (
+    <div className="flex flex-col gap-1.5 bg-panel2 border border-line rounded-md p-2">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => inputRef.current?.click()}
+          className="w-11 h-11 rounded-full border border-line flex items-center justify-center overflow-hidden shrink-0 bg-[#1A1D24]"
+          title="Upload avatar"
+        >
+          {slot.dataUrl ? (
+            <img src={slot.dataUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <ImageIcon size={16} className="text-gray-500" />
+          )}
+        </button>
         <input
-          type="text"
-          value={slot.label}
-          onChange={(e) => onLabelChange(e.target.value)}
-          placeholder={placeholderText}
-          className="input flex-1"
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file && isImageFile(file)) onFile(file)
+            e.target.value = ''
+          }}
         />
-      ) : (
-        <span className="flex-1 text-sm text-gray-300">{slot.label}</span>
-      )}
 
-      <button onClick={onRemove} className="text-gray-500 hover:text-red-400 shrink-0">
-        <Trash2 size={16} />
-      </button>
+        {editableLabel ? (
+          <input
+            type="text"
+            value={slot.label}
+            onChange={(e) => onLabelChange(e.target.value)}
+            placeholder={placeholderText}
+            className="input flex-1"
+          />
+        ) : (
+          <span className="flex-1 text-sm text-gray-300">{slot.label}</span>
+        )}
+
+        <button onClick={onRemove} className="text-gray-500 hover:text-red-400 shrink-0">
+          <Trash2 size={16} />
+        </button>
+      </div>
+
+      <div className="flex items-center gap-2 pl-[52px]">
+        <span className="text-xs text-gray-500 shrink-0">Shape:</span>
+        <select
+          value={slot.shape || 'circle'}
+          onChange={(e) => onShapeChange(e.target.value)}
+          className="bg-[#1F2430] border border-line rounded px-2 py-0.5 text-xs text-gray-300 focus:outline-none focus:border-accent flex-1"
+        >
+          <option value="circle">Circle</option>
+          <option value="square">Square</option>
+          <option value="rounded">Rounded Square</option>
+          <option value="oval">Oval</option>
+        </select>
+      </div>
+
+      <div className="flex items-center gap-2 pl-[52px]">
+        <span className="text-xs text-gray-500 shrink-0">Style:</span>
+        <select
+          value={slot.fillEnabled !== false ? 'solid' : 'outline'}
+          onChange={(e) => onFillEnabledChange(e.target.value === 'solid')}
+          className="bg-[#1F2430] border border-line rounded px-2 py-0.5 text-xs text-gray-300 focus:outline-none focus:border-accent flex-1"
+        >
+          <option value="solid">Solid</option>
+          <option value="outline">Outline</option>
+        </select>
+      </div>
+
+      <div className="flex items-center gap-2 pl-[52px]">
+        <span className="text-xs text-gray-500 shrink-0">Border:</span>
+        <div className="flex items-center gap-2 flex-1">
+          <input
+            type="color"
+            value={normalizeHexColor(slot.stroke || '#000000')}
+            onChange={(e) => onStrokeChange(e.target.value)}
+            className="h-6 flex-1 rounded border border-line bg-[#1F2430] cursor-pointer"
+          />
+          <span className="text-[10px] text-gray-400 font-mono uppercase">
+            {slot.stroke || '#000000'}
+          </span>
+        </div>
+      </div>
+
+      <div className="pl-[52px] mt-1">
+        <div className="flex justify-between text-xs text-gray-400 mb-1">
+          <span>Opacity</span>
+          <span>{opacityVal}%</span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="5"
+          value={opacityVal}
+          onChange={(e) => onOpacityChange(parseInt(e.target.value, 10))}
+          className="w-full"
+        />
+      </div>
+
+      <div className="pl-[52px] mt-1">
+        <div className="flex justify-between text-xs text-gray-400 mb-1">
+          <span>Brightness</span>
+          <span>{brightnessVal}</span>
+        </div>
+        <input
+          type="range"
+          min="-100"
+          max="100"
+          step="5"
+          value={brightnessVal}
+          onChange={(e) => onBrightnessChange(parseInt(e.target.value, 10))}
+          className="w-full"
+        />
+      </div>
     </div>
   )
 }

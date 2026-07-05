@@ -6,12 +6,18 @@ import { computeLayout } from '../utils/gridLayouts'
 import AvatarNode from './AvatarNode'
 import { Plus, Minus } from 'lucide-react'
 
-export default function CanvasPreview({ config, setConfig, stageRef }) {
+export default function CanvasPreview({ config, setConfig, stageRef, selectedId, selectShape }) {
   const wrapperRef = useRef(null)
   const [autoScale, setAutoScale] = useState(1)
   const [zoomMode, setZoomMode] = useState('fit')
   const [manualZoom, setManualZoom] = useState(1)
-  const [selectedId, selectShape] = useState(null)
+
+  const checkDeselect = (e) => {
+    const clickedOnEmpty = e.target === e.target.getStage() || e.target.name() === 'background'
+    if (clickedOnEmpty) {
+      selectShape(null)
+    }
+  }
 
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 })
@@ -195,16 +201,8 @@ export default function CanvasPreview({ config, setConfig, stageRef }) {
               width={canvasWidth}
               height={canvasHeight}
               ref={stageRef}
-              onMouseDown={(e) => {
-                if (e.target === e.target.getStage()) {
-                  selectShape(null)
-                }
-              }}
-              onTouchStart={(e) => {
-                if (e.target === e.target.getStage()) {
-                  selectShape(null)
-                }
-              }}
+              onMouseDown={checkDeselect}
+              onTouchStart={checkDeselect}
             >
               <PosterLayer
                 config={config}
@@ -283,6 +281,11 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
   const bgRef = useRef(null)
 
   const logoGroupRef = useRef(null)
+  const mainCaptionRef = useRef(null)
+  const dateRef = useRef(null)
+  const secondaryCaptionRef = useRef(null)
+  const promoMessageRef = useRef(null)
+  const avatarRefs = useRef({})
   const transformerRef = useRef(null)
 
   useEffect(() => {
@@ -293,11 +296,39 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
   }, [bgImage, config.background.brightness])
 
   useEffect(() => {
-    if (selectedId === 'logo' && transformerRef.current && logoGroupRef.current) {
-      transformerRef.current.nodes([logoGroupRef.current])
-      transformerRef.current.getLayer()?.batchDraw()
+    if (!transformerRef.current) return
+
+    let targetNode = null
+    if (selectedId === 'logo') {
+      targetNode = logoGroupRef.current
+    } else if (selectedId === 'mainCaption') {
+      targetNode = mainCaptionRef.current
+    } else if (selectedId === 'date') {
+      targetNode = dateRef.current
+    } else if (selectedId === 'secondaryCaption') {
+      targetNode = secondaryCaptionRef.current
+    } else if (selectedId === 'promoMessage') {
+      targetNode = promoMessageRef.current
+    } else if (selectedId && avatarRefs.current[selectedId]) {
+      targetNode = avatarRefs.current[selectedId]
     }
-  }, [selectedId, config.logo])
+
+    if (targetNode) {
+      transformerRef.current.nodes([targetNode])
+      transformerRef.current.getLayer()?.batchDraw()
+    } else {
+      transformerRef.current.nodes([])
+    }
+  }, [
+    selectedId,
+    config.logo,
+    config.mainCaption,
+    config.date,
+    config.secondaryCaption,
+    config.promoMessage,
+    config.family,
+    config.friends
+  ])
 
   const updateLogoState = (newFields) => {
     if (!setConfig) return
@@ -308,6 +339,46 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
         ...newFields,
       },
     }))
+  }
+
+  const updateCaptionState = (key, newFields) => {
+    if (!setConfig) return
+    setConfig((prev) => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        ...newFields,
+      },
+    }))
+  }
+
+  const updateAvatarPosition = (category, id, newFields) => {
+    if (!setConfig) return
+    setConfig((prev) => {
+      if (category === 'friends') {
+        const nextList = prev.friends.list.map((item) =>
+          item.id === id ? { ...item, ...newFields } : item
+        )
+        return {
+          ...prev,
+          friends: {
+            ...prev.friends,
+            list: nextList,
+          },
+        }
+      } else {
+        const nextGroup = prev.family[category].map((item) =>
+          item.id === id ? { ...item, ...newFields } : item
+        )
+        return {
+          ...prev,
+          family: {
+            ...prev.family,
+            [category]: nextGroup,
+          },
+        }
+      }
+    })
   }
 
   const logoScaleX = config.logo.scaleX !== undefined ? config.logo.scaleX : 1
@@ -328,11 +399,12 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
   return (
     <Layer>
       {/* Base fill so transparent PNGs / no-background-uploaded states still export clean */}
-      <Rect width={canvasWidth} height={canvasHeight} fill="#FFFFFF" />
+      <Rect name="background" width={canvasWidth} height={canvasHeight} fill="#FFFFFF" />
 
       {bgImage && (
         <KonvaImage
           ref={bgRef}
+          name="background"
           image={bgImage}
           width={canvasWidth}
           height={canvasHeight}
@@ -344,63 +416,189 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
 
       {/* Header text block */}
       <Text
-        text={config.mainCaption}
-        x={0}
-        y={header.mainY}
+        ref={mainCaptionRef}
+        text={config.mainCaption.text}
+        x={config.mainCaption.x ?? 0}
+        y={Math.min(config.mainCaption.y ?? header.mainY, canvasHeight - 40)}
+        scaleX={config.mainCaption.scaleX || 1}
+        scaleY={config.mainCaption.scaleY || 1}
         width={canvasWidth}
         align="center"
-        fontSize={header.mainSize}
-        fontFamily="Inter, Arial, sans-serif"
+        fontSize={config.mainCaption.fontSize || 40}
+        fontFamily={config.mainCaption.fontFamily || 'Arial'}
         fontStyle="700"
-        fill="#1A1A1A"
+        fill={config.mainCaption.fill || '#1A1A1A'}
+        draggable
+        onClick={() => selectShape('mainCaption')}
+        onTap={() => selectShape('mainCaption')}
+        onDragEnd={(e) => {
+          const node = e.target
+          updateCaptionState('mainCaption', { x: node.x(), y: node.y() })
+        }}
+        onTransformEnd={(e) => {
+          const node = e.target
+          updateCaptionState('mainCaption', {
+            x: node.x(),
+            y: node.y(),
+            scaleX: node.scaleX(),
+            scaleY: node.scaleY(),
+          })
+        }}
       />
       <Text
-        text={config.date}
-        x={0}
-        y={header.dateY}
+        ref={dateRef}
+        text={config.date.text}
+        x={config.date.x ?? 0}
+        y={Math.min(config.date.y ?? header.dateY, canvasHeight - 40)}
+        scaleX={config.date.scaleX || 1}
+        scaleY={config.date.scaleY || 1}
         width={canvasWidth}
         align="center"
-        fontSize={header.dateSize}
-        fontFamily="Inter, Arial, sans-serif"
-        fill="#5A5A5A"
+        fontSize={config.date.fontSize || 20}
+        fontFamily={config.date.fontFamily || 'Arial'}
+        fill={config.date.fill || '#5A5A5A'}
+        draggable
+        onClick={() => selectShape('date')}
+        onTap={() => selectShape('date')}
+        onDragEnd={(e) => {
+          const node = e.target
+          updateCaptionState('date', { x: node.x(), y: node.y() })
+        }}
+        onTransformEnd={(e) => {
+          const node = e.target
+          updateCaptionState('date', {
+            x: node.x(),
+            y: node.y(),
+            scaleX: node.scaleX(),
+            scaleY: node.scaleY(),
+          })
+        }}
       />
       <Text
-        text={config.secondaryCaption}
-        x={0}
-        y={header.subY}
+        ref={secondaryCaptionRef}
+        text={config.secondaryCaption.text}
+        x={config.secondaryCaption.x ?? 0}
+        y={Math.min(config.secondaryCaption.y ?? header.subY, canvasHeight - 40)}
+        scaleX={config.secondaryCaption.scaleX || 1}
+        scaleY={config.secondaryCaption.scaleY || 1}
         width={canvasWidth}
         align="center"
-        fontSize={header.subSize}
-        fontFamily="Georgia, serif"
+        fontSize={config.secondaryCaption.fontSize || 30}
+        fontFamily={config.secondaryCaption.fontFamily || 'Arial'}
         fontStyle="italic"
-        fill="#2E2E2E"
+        fill={config.secondaryCaption.fill || '#2E2E2E'}
+        draggable
+        onClick={() => selectShape('secondaryCaption')}
+        onTap={() => selectShape('secondaryCaption')}
+        onDragEnd={(e) => {
+          const node = e.target
+          updateCaptionState('secondaryCaption', { x: node.x(), y: node.y() })
+        }}
+        onTransformEnd={(e) => {
+          const node = e.target
+          updateCaptionState('secondaryCaption', {
+            x: node.x(),
+            y: node.y(),
+            scaleX: node.scaleX(),
+            scaleY: node.scaleY(),
+          })
+        }}
       />
 
       {/* Avatars — always render every defined slot (placeholder circle if
           no image yet) so it's clear to the user where each role goes */}
-      {avatarSlots.map((slot) => (
-        <AvatarNode
-          key={slot.id}
-          x={slot.x}
-          y={slot.y}
-          size={slot.size}
-          label={slot.label}
-          dataUrl={slot.dataUrl}
-          darken={config.darkenAllAvatars}
-        />
-      ))}
+      {avatarSlots.map((slot) => {
+        const calculatedGridX = slot.x
+        const calculatedGridY = slot.y
+
+        const avatarX = slot.customX ?? calculatedGridX
+        const avatarY = slot.customY ?? calculatedGridY
+        const avatarScaleX = slot.scaleX ?? 1
+        const avatarScaleY = slot.scaleY ?? 1
+
+        return (
+          <Group
+            key={slot.id}
+            ref={(node) => {
+              if (node) {
+                avatarRefs.current[slot.id] = node
+              } else {
+                delete avatarRefs.current[slot.id]
+              }
+            }}
+            draggable
+            x={avatarX}
+            y={avatarY}
+            scaleX={avatarScaleX}
+            scaleY={avatarScaleY}
+            onClick={() => selectShape(slot.id)}
+            onTap={() => selectShape(slot.id)}
+            onDragEnd={(e) => {
+              const node = e.target
+              updateAvatarPosition(slot.category, slot.id, {
+                customX: node.x(),
+                customY: node.y(),
+              })
+            }}
+            onTransformEnd={(e) => {
+              const node = e.target
+              updateAvatarPosition(slot.category, slot.id, {
+                customX: node.x(),
+                customY: node.y(),
+                scaleX: node.scaleX(),
+                scaleY: node.scaleY(),
+              })
+            }}
+          >
+            <AvatarNode
+              x={0}
+              y={0}
+              size={slot.size}
+              label={slot.label}
+              dataUrl={slot.dataUrl}
+              opacity={slot.opacity !== undefined ? slot.opacity : 100}
+              brightness={slot.brightness !== undefined ? slot.brightness : 0}
+              fontFamily={slot.fontFamily || 'Arial'}
+              fontSize={slot.fontSize || 16}
+              fill={slot.fill || '#2A2A2A'}
+              stroke={slot.stroke || '#000000'}
+              fillEnabled={slot.fillEnabled !== false}
+              shape={slot.shape || 'circle'}
+            />
+          </Group>
+        )
+      })}
 
       {/* Promo message */}
       <Text
-        text={config.promoMessage}
-        x={40}
-        y={promoY}
+        ref={promoMessageRef}
+        text={config.promoMessage.text}
+        x={config.promoMessage.x ?? 40}
+        y={Math.min(config.promoMessage.y ?? promoY, canvasHeight - 40)}
+        scaleX={config.promoMessage.scaleX || 1}
+        scaleY={config.promoMessage.scaleY || 1}
         width={canvasWidth - 80}
         align="center"
-        fontSize={promoSize}
-        fontFamily="Inter, Arial, sans-serif"
-        fill="#444444"
+        fontSize={config.promoMessage.fontSize || 20}
+        fontFamily={config.promoMessage.fontFamily || 'Arial'}
+        fill={config.promoMessage.fill || '#444444'}
         lineHeight={1.4}
+        draggable
+        onClick={() => selectShape('promoMessage')}
+        onTap={() => selectShape('promoMessage')}
+        onDragEnd={(e) => {
+          const node = e.target
+          updateCaptionState('promoMessage', { x: node.x(), y: node.y() })
+        }}
+        onTransformEnd={(e) => {
+          const node = e.target
+          updateCaptionState('promoMessage', {
+            x: node.x(),
+            y: node.y(),
+            scaleX: node.scaleX(),
+            scaleY: node.scaleY(),
+          })
+        }}
       />
 
       {/* Draggable Logo Group */}
@@ -457,7 +655,7 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
       </Group>
 
       {/* Attach Transformer conditionally */}
-      {selectedId === 'logo' && (
+      {selectedId && (
         <Transformer
           ref={transformerRef}
           boundBoxFunc={(oldBox, newBox) => {
