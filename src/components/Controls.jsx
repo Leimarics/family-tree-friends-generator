@@ -86,7 +86,17 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
   return (
     <div className="flex flex-col gap-7">
       <div>
-        <h1 className="text-xl font-semibold text-white">Poster Generator</h1>
+        <div className="flex items-baseline gap-2">
+          <h1 className="text-xl font-semibold text-white">Poster Generator</h1>
+          <a
+            href="https://www.leimarics.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-gray-400 hover:text-white transition-colors font-medium"
+          >
+            by Leimarics
+          </a>
+        </div>
         <p className="text-sm text-gray-400 mt-1">Family Tree &amp; Friends&apos; Frenzy layouts</p>
       </div>
 
@@ -395,6 +405,18 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
           </button>
         </div>
       </Section>
+
+      <div className="text-xs text-gray-500 mt-8 mb-4 text-center">
+        Powered by{' '}
+        <a
+          href="https://www.leimarics.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-bold text-gray-400 hover:text-white transition-colors"
+        >
+          Leimarics
+        </a>
+      </div>
     </div>
   )
 }
