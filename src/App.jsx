@@ -181,6 +181,8 @@ export default function App() {
               fontFamily: slot.fontFamily !== undefined ? slot.fontFamily : 'Arial',
               fontSize: slot.fontSize !== undefined ? slot.fontSize : 16,
               fill: slot.fill !== undefined ? slot.fill : '#2A2A2A',
+              stroke: slot.stroke !== undefined ? slot.stroke : '#000000',
+              fillEnabled: slot.fillEnabled !== undefined ? slot.fillEnabled : true,
             }))
           }
           return cleanFamily
@@ -196,6 +198,8 @@ export default function App() {
               fontFamily: slot.fontFamily !== undefined ? slot.fontFamily : 'Arial',
               fontSize: slot.fontSize !== undefined ? slot.fontSize : 16,
               fill: slot.fill !== undefined ? slot.fill : '#2A2A2A',
+              stroke: slot.stroke !== undefined ? slot.stroke : '#000000',
+              fillEnabled: slot.fillEnabled !== undefined ? slot.fillEnabled : true,
             }))
           }
         })(),

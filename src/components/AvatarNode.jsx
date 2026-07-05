@@ -12,7 +12,7 @@ import Konva from 'konva'
  * so we clip a Group instead -- that's the reliable way to get custom avatar
  * shapes that still export cleanly to PNG/JPEG.
  */
-export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, brightness = 0, fontFamily = 'Arial', fontSize = 16, fill = '#2A2A2A', shape = 'circle' }) {
+export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, brightness = 0, fontFamily = 'Arial', fontSize = 16, fill = '#2A2A2A', stroke = '#000000', fillEnabled = true, shape = 'circle' }) {
   const [image] = useImage(dataUrl || undefined, 'anonymous')
   const imgRef = useRef(null)
 
@@ -64,21 +64,11 @@ export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, 
   }
 
   const renderPlaceholder = () => {
-    if (shape === 'square') {
-      return <Rect x={0} y={0} width={size} height={size} fill="#E2E5EA" stroke="#B8BEC8" strokeWidth={2} dash={[8, 6]} />
-    }
-    if (shape === 'rounded') {
-      const r = Math.max(4, size * 0.125)
-      return <Rect x={0} y={0} width={size} height={size} cornerRadius={r} fill="#E2E5EA" stroke="#B8BEC8" strokeWidth={2} dash={[8, 6]} />
-    }
-    if (shape === 'oval') {
-      return <Ellipse x={size / 2} y={size / 2} radiusX={size / 2} radiusY={size / 2.5} fill="#E2E5EA" stroke="#B8BEC8" strokeWidth={2} dash={[8, 6]} />
-    }
-    return <Circle x={size / 2} y={size / 2} radius={size / 2} fill="#E2E5EA" stroke="#B8BEC8" strokeWidth={2} dash={[8, 6]} />
-  }
+    const placeholderFill = fillEnabled ? '#E2E5EA' : 'transparent'
+    const placeholderStroke = fillEnabled ? '#B8BEC8' : stroke
+    const placeholderStrokeWidth = fillEnabled ? 2 : 2
+    const placeholderDash = fillEnabled ? [8, 6] : null
 
-  const renderBorderRing = () => {
-    const strokeWidth = Math.max(3, size * 0.025)
     if (shape === 'square') {
       return (
         <Rect
@@ -86,8 +76,69 @@ export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, 
           y={0}
           width={size}
           height={size}
-          stroke="#ffffff"
-          strokeWidth={strokeWidth}
+          fill={placeholderFill}
+          stroke={placeholderStroke}
+          strokeWidth={placeholderStrokeWidth}
+          dash={placeholderDash}
+        />
+      )
+    }
+    if (shape === 'rounded') {
+      const r = Math.max(4, size * 0.125)
+      return (
+        <Rect
+          x={0}
+          y={0}
+          width={size}
+          height={size}
+          cornerRadius={r}
+          fill={placeholderFill}
+          stroke={placeholderStroke}
+          strokeWidth={placeholderStrokeWidth}
+          dash={placeholderDash}
+        />
+      )
+    }
+    if (shape === 'oval') {
+      return (
+        <Ellipse
+          x={size / 2}
+          y={size / 2}
+          radiusX={size / 2}
+          radiusY={size / 2.5}
+          fill={placeholderFill}
+          stroke={placeholderStroke}
+          strokeWidth={placeholderStrokeWidth}
+          dash={placeholderDash}
+        />
+      )
+    }
+    return (
+      <Circle
+        x={size / 2}
+        y={size / 2}
+        radius={size / 2}
+        fill={placeholderFill}
+        stroke={placeholderStroke}
+        strokeWidth={placeholderStrokeWidth}
+        dash={placeholderDash}
+      />
+    )
+  }
+
+  const renderBorderRing = () => {
+    const ringStroke = stroke
+    const ringStrokeWidth = fillEnabled ? Math.max(3, size * 0.025) : 2
+
+    if (shape === 'square') {
+      return (
+        <Rect
+          x={0}
+          y={0}
+          width={size}
+          height={size}
+          stroke={ringStroke}
+          strokeWidth={ringStrokeWidth}
           shadowColor="black"
           shadowBlur={10}
           shadowOpacity={0.25}
@@ -104,8 +155,8 @@ export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, 
           width={size}
           height={size}
           cornerRadius={r}
-          stroke="#ffffff"
-          strokeWidth={strokeWidth}
+          stroke={ringStroke}
+          strokeWidth={ringStrokeWidth}
           shadowColor="black"
           shadowBlur={10}
           shadowOpacity={0.25}
@@ -120,8 +171,8 @@ export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, 
           y={size / 2}
           radiusX={size / 2}
           radiusY={size / 2.5}
-          stroke="#ffffff"
-          strokeWidth={strokeWidth}
+          stroke={ringStroke}
+          strokeWidth={ringStrokeWidth}
           shadowColor="black"
           shadowBlur={10}
           shadowOpacity={0.25}
@@ -134,8 +185,8 @@ export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, 
         x={size / 2}
         y={size / 2}
         radius={size / 2}
-        stroke="#ffffff"
-        strokeWidth={strokeWidth}
+        stroke={ringStroke}
+        strokeWidth={ringStrokeWidth}
         shadowColor="black"
         shadowBlur={10}
         shadowOpacity={0.25}

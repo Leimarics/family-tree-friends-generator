@@ -561,6 +561,8 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
               fontFamily={slot.fontFamily || 'Arial'}
               fontSize={slot.fontSize || 16}
               fill={slot.fill || '#2A2A2A'}
+              stroke={slot.stroke || '#000000'}
+              fillEnabled={slot.fillEnabled !== false}
               shape={slot.shape || 'circle'}
             />
           </Group>

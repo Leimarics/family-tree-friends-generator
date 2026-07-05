@@ -171,6 +171,8 @@ export function makeSlot(label = '') {
     fontFamily: 'Arial',
     fontSize: 16,
     fill: '#2A2A2A',
+    stroke: '#000000',
+    fillEnabled: true,
   }
 }
 
