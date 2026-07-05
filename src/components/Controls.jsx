@@ -3,6 +3,20 @@ import { Plus, Trash2, Upload, Moon, Image as ImageIcon, Frame as FrameIcon, Dow
 import { fileToDataUrl, isImageFile } from '../utils/fileToDataUrl'
 import { GROUP_LIMITS, makeSlot } from '../utils/gridLayouts'
 
+const normalizeHexColor = (color) => {
+  if (!color) return '#000000'
+  if (/^#[0-9A-Ff]{3}$/.test(color)) {
+    return '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3]
+  }
+  if (!color.startsWith('#')) {
+    color = '#' + color
+  }
+  if (color.length === 7) {
+    return color
+  }
+  return '#000000'
+}
+
 export default function Controls({ config, setConfig, exportFormat, setExportFormat, isExporting, handleExport, selectedId, setSelectedId }) {
   const update = (patch) => setConfig((prev) => ({ ...prev, ...patch }))
 
@@ -65,19 +79,7 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
     return null
   }
 
-  const normalizeHexColor = (color) => {
-    if (!color) return '#000000'
-    if (/^#[0-9A-Ff]{3}$/.test(color)) {
-      return '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3]
-    }
-    if (!color.startsWith('#')) {
-      color = '#' + color
-    }
-    if (color.length === 7) {
-      return color
-    }
-    return '#000000'
-  }
+
 
   const selectedTextSettings = getSelectedTextSettings(selectedId)
   const isAvatarSelected = selectedId && !['mainCaption', 'date', 'secondaryCaption', 'promoMessage', 'logo'].includes(selectedId)
@@ -119,7 +121,7 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
                 <option value="Verdana">Verdana</option>
                 <option value="Trebuchet MS">Trebuchet MS</option>
                 <option value="Impact">Impact</option>
-                <option value="Comic Sans MS">Comic Sans MS</option>
+                <option value="Great Vibes">Great Vibes</option>
                 <option value="Palatino">Palatino</option>
                 <option value="Lucida Sans">Lucida Sans</option>
               </select>
@@ -556,6 +558,8 @@ function AvatarGroupEditor({ title, hint, list, max, onChange, freeLabel, autoLa
           onShapeChange={(shape) => updateSlot(slot.id, { shape })}
           onOpacityChange={(opacity) => updateSlot(slot.id, { opacity })}
           onBrightnessChange={(brightness) => updateSlot(slot.id, { brightness })}
+          onStrokeChange={(stroke) => updateSlot(slot.id, { stroke })}
+          onFillEnabledChange={(fillEnabled) => updateSlot(slot.id, { fillEnabled })}
           onFile={async (file) => {
             const dataUrl = await fileToDataUrl(file)
             updateSlot(slot.id, { dataUrl })
@@ -584,6 +588,8 @@ function AvatarSlotRow({
   onShapeChange,
   onOpacityChange,
   onBrightnessChange,
+  onStrokeChange,
+  onFillEnabledChange,
   onFile,
   onRemove
 }) {
@@ -652,6 +658,33 @@ function AvatarSlotRow({
           <option value="rounded">Rounded Square</option>
           <option value="oval">Oval</option>
         </select>
+      </div>
+
+      <div className="flex items-center gap-2 pl-[52px]">
+        <span className="text-xs text-gray-500 shrink-0">Style:</span>
+        <select
+          value={slot.fillEnabled !== false ? 'solid' : 'outline'}
+          onChange={(e) => onFillEnabledChange(e.target.value === 'solid')}
+          className="bg-[#1F2430] border border-line rounded px-2 py-0.5 text-xs text-gray-300 focus:outline-none focus:border-accent flex-1"
+        >
+          <option value="solid">Solid</option>
+          <option value="outline">Outline</option>
+        </select>
+      </div>
+
+      <div className="flex items-center gap-2 pl-[52px]">
+        <span className="text-xs text-gray-500 shrink-0">Border:</span>
+        <div className="flex items-center gap-2 flex-1">
+          <input
+            type="color"
+            value={normalizeHexColor(slot.stroke || '#000000')}
+            onChange={(e) => onStrokeChange(e.target.value)}
+            className="h-6 flex-1 rounded border border-line bg-[#1F2430] cursor-pointer"
+          />
+          <span className="text-[10px] text-gray-400 font-mono uppercase">
+            {slot.stroke || '#000000'}
+          </span>
+        </div>
       </div>
 
       <div className="pl-[52px] mt-1">
