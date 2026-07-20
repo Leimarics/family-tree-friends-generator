@@ -173,6 +173,15 @@ export function makeSlot(label = '') {
     fill: '#2A2A2A',
     stroke: '#000000',
     fillEnabled: true,
+    fontStyle: 'normal',
+    photoX: 0,
+    photoY: 0,
+    circleEnabled: true,
+    labelEnabled: true,
+    circleScaleX: 1,
+    circleScaleY: 1,
+    labelScaleX: 1,
+    labelScaleY: 1,
   }
 }
 

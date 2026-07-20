@@ -6,16 +6,37 @@ import { computeLayout } from '../utils/gridLayouts'
 import AvatarNode from './AvatarNode'
 import { Plus, Minus } from 'lucide-react'
 
-export default function CanvasPreview({ config, setConfig, stageRef, selectedId, selectShape }) {
+export default function CanvasPreview({ config, setConfig, stageRef, selectedId, selectShape, croppingId, setCroppingId }) {
   const wrapperRef = useRef(null)
   const [autoScale, setAutoScale] = useState(1)
   const [zoomMode, setZoomMode] = useState('fit')
   const [manualZoom, setManualZoom] = useState(1)
 
+  const handleSelectShape = (id) => {
+    selectShape(id)
+    if (id !== croppingId && setCroppingId) {
+      setCroppingId(null)
+    }
+  }
+
   const checkDeselect = (e) => {
     const clickedOnEmpty = e.target === e.target.getStage() || e.target.name() === 'background'
     if (clickedOnEmpty) {
-      selectShape(null)
+      handleSelectShape(null)
+    }
+  }
+
+  const handleStageDblClick = (e) => {
+    const clickedOnEmpty = e.target === e.target.getStage() || e.target.name() === 'background'
+    if (clickedOnEmpty) {
+      setZoomMode((prevMode) => {
+        if (prevMode === 'fit') {
+          setManualZoom(1.0)
+          return 'manual'
+        } else {
+          return 'fit'
+        }
+      })
     }
   }
 
@@ -77,22 +98,6 @@ export default function CanvasPreview({ config, setConfig, stageRef, selectedId,
           e.touches[0].pageY - e.touches[1].pageY
         )
         startScale = zoomMode === 'fit' ? autoScale : manualZoom
-      }
-      // 2. Handle double tap zoom (1 finger)
-      else if (e.touches.length === 1) {
-        const now = Date.now()
-        if (now - lastTouchTime < 300) {
-          e.preventDefault()
-          setZoomMode((prevMode) => {
-            if (prevMode === 'fit') {
-              setManualZoom(1.0)
-              return 'manual'
-            } else {
-              return 'fit'
-            }
-          })
-        }
-        lastTouchTime = now
       }
     }
 
@@ -167,7 +172,6 @@ export default function CanvasPreview({ config, setConfig, stageRef, selectedId,
     <div className="w-full h-full relative flex flex-col">
       <div
         ref={wrapperRef}
-        onDoubleClick={handleDoubleClick}
         className={`w-full h-full flex-1 flex overflow-auto bg-[#0F1115] rounded-xl border border-line p-2 md:p-4 select-none transition-all ${
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
@@ -203,13 +207,17 @@ export default function CanvasPreview({ config, setConfig, stageRef, selectedId,
               ref={stageRef}
               onMouseDown={checkDeselect}
               onTouchStart={checkDeselect}
+              onDblClick={handleStageDblClick}
+              onDblTap={handleStageDblClick}
             >
               <PosterLayer
                 config={config}
                 setConfig={setConfig}
                 layout={layout}
                 selectedId={selectedId}
-                selectShape={selectShape}
+                selectShape={handleSelectShape}
+                croppingId={croppingId}
+                setCroppingId={setCroppingId}
               />
             </Stage>
           </div>
@@ -274,13 +282,14 @@ export default function CanvasPreview({ config, setConfig, stageRef, selectedId,
   )
 }
 
-function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
+function PosterLayer({ config, setConfig, layout, selectedId, selectShape, croppingId, setCroppingId }) {
   const { canvasWidth, canvasHeight, header, avatarSlots, promoY, promoSize, logoY, logoSize } = layout
   const [bgImage] = useImage(config.background.dataUrl || undefined, 'anonymous')
   const [logoImage] = useImage(config.logo.dataUrl || undefined, 'anonymous')
   const bgRef = useRef(null)
 
   const logoGroupRef = useRef(null)
+  const mottoRef = useRef(null)
   const mainCaptionRef = useRef(null)
   const dateRef = useRef(null)
   const secondaryCaptionRef = useRef(null)
@@ -299,17 +308,19 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
     if (!transformerRef.current) return
 
     let targetNode = null
-    if (selectedId === 'logo') {
+    if (selectedId === 'logo' && config.logo.enabled !== false) {
       targetNode = logoGroupRef.current
-    } else if (selectedId === 'mainCaption') {
+    } else if (selectedId === 'motto' && config.motto.enabled !== false) {
+      targetNode = mottoRef.current
+    } else if (selectedId === 'mainCaption' && config.mainCaption.enabled !== false) {
       targetNode = mainCaptionRef.current
-    } else if (selectedId === 'date') {
+    } else if (selectedId === 'date' && config.date.enabled !== false) {
       targetNode = dateRef.current
-    } else if (selectedId === 'secondaryCaption') {
+    } else if (selectedId === 'secondaryCaption' && config.secondaryCaption.enabled !== false) {
       targetNode = secondaryCaptionRef.current
-    } else if (selectedId === 'promoMessage') {
+    } else if (selectedId === 'promoMessage' && config.promoMessage.enabled !== false) {
       targetNode = promoMessageRef.current
-    } else if (selectedId && avatarRefs.current[selectedId]) {
+    } else if (selectedId && avatarRefs.current[selectedId] && croppingId !== selectedId) {
       targetNode = avatarRefs.current[selectedId]
     }
 
@@ -321,7 +332,9 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
     }
   }, [
     selectedId,
+    croppingId,
     config.logo,
+    config.motto,
     config.mainCaption,
     config.date,
     config.secondaryCaption,
@@ -394,7 +407,15 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
 
   const logoYCoord = config.logo.y !== undefined 
     ? Math.max(logoHalfHeight, Math.min(canvasHeight - logoHalfHeight, config.logo.y)) 
-    : logoY + logoSize / 2
+    : logoY + logoSize / 2 - (config.motto.enabled !== false ? 15 : 0)
+
+  const mottoX = config.motto.x !== undefined
+    ? config.motto.x
+    : canvasWidth / 2
+
+  const mottoYCoord = config.motto.y !== undefined
+    ? config.motto.y
+    : logoYCoord + (logoImage ? logoSize / 2 + 15 : 30)
 
   return (
     <Layer>
@@ -415,95 +436,102 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
       )}
 
       {/* Header text block */}
-      <Text
-        ref={mainCaptionRef}
-        text={config.mainCaption.text}
-        x={config.mainCaption.x ?? 0}
-        y={Math.min(config.mainCaption.y ?? header.mainY, canvasHeight - 40)}
-        scaleX={config.mainCaption.scaleX || 1}
-        scaleY={config.mainCaption.scaleY || 1}
-        width={canvasWidth}
-        align="center"
-        fontSize={config.mainCaption.fontSize || 40}
-        fontFamily={config.mainCaption.fontFamily || 'Arial'}
-        fontStyle="700"
-        fill={config.mainCaption.fill || '#1A1A1A'}
-        draggable
-        onClick={() => selectShape('mainCaption')}
-        onTap={() => selectShape('mainCaption')}
-        onDragEnd={(e) => {
-          const node = e.target
-          updateCaptionState('mainCaption', { x: node.x(), y: node.y() })
-        }}
-        onTransformEnd={(e) => {
-          const node = e.target
-          updateCaptionState('mainCaption', {
-            x: node.x(),
-            y: node.y(),
-            scaleX: node.scaleX(),
-            scaleY: node.scaleY(),
-          })
-        }}
-      />
-      <Text
-        ref={dateRef}
-        text={config.date.text}
-        x={config.date.x ?? 0}
-        y={Math.min(config.date.y ?? header.dateY, canvasHeight - 40)}
-        scaleX={config.date.scaleX || 1}
-        scaleY={config.date.scaleY || 1}
-        width={canvasWidth}
-        align="center"
-        fontSize={config.date.fontSize || 20}
-        fontFamily={config.date.fontFamily || 'Arial'}
-        fill={config.date.fill || '#5A5A5A'}
-        draggable
-        onClick={() => selectShape('date')}
-        onTap={() => selectShape('date')}
-        onDragEnd={(e) => {
-          const node = e.target
-          updateCaptionState('date', { x: node.x(), y: node.y() })
-        }}
-        onTransformEnd={(e) => {
-          const node = e.target
-          updateCaptionState('date', {
-            x: node.x(),
-            y: node.y(),
-            scaleX: node.scaleX(),
-            scaleY: node.scaleY(),
-          })
-        }}
-      />
-      <Text
-        ref={secondaryCaptionRef}
-        text={config.secondaryCaption.text}
-        x={config.secondaryCaption.x ?? 0}
-        y={Math.min(config.secondaryCaption.y ?? header.subY, canvasHeight - 40)}
-        scaleX={config.secondaryCaption.scaleX || 1}
-        scaleY={config.secondaryCaption.scaleY || 1}
-        width={canvasWidth}
-        align="center"
-        fontSize={config.secondaryCaption.fontSize || 30}
-        fontFamily={config.secondaryCaption.fontFamily || 'Arial'}
-        fontStyle="italic"
-        fill={config.secondaryCaption.fill || '#2E2E2E'}
-        draggable
-        onClick={() => selectShape('secondaryCaption')}
-        onTap={() => selectShape('secondaryCaption')}
-        onDragEnd={(e) => {
-          const node = e.target
-          updateCaptionState('secondaryCaption', { x: node.x(), y: node.y() })
-        }}
-        onTransformEnd={(e) => {
-          const node = e.target
-          updateCaptionState('secondaryCaption', {
-            x: node.x(),
-            y: node.y(),
-            scaleX: node.scaleX(),
-            scaleY: node.scaleY(),
-          })
-        }}
-      />
+      {config.mainCaption.enabled !== false && (
+        <Text
+          ref={mainCaptionRef}
+          text={config.mainCaption.text}
+          x={config.mainCaption.x ?? 0}
+          y={Math.min(config.mainCaption.y ?? header.mainY, canvasHeight - 40)}
+          scaleX={config.mainCaption.scaleX || 1}
+          scaleY={config.mainCaption.scaleY || 1}
+          width={canvasWidth}
+          align="center"
+          fontSize={config.mainCaption.fontSize || 40}
+          fontFamily={config.mainCaption.fontFamily || 'Arial'}
+          fontStyle={config.mainCaption.fontStyle || 'bold'}
+          fill={config.mainCaption.fill || '#1A1A1A'}
+          draggable
+          onClick={() => selectShape('mainCaption')}
+          onTap={() => selectShape('mainCaption')}
+          onDragEnd={(e) => {
+            const node = e.target
+            updateCaptionState('mainCaption', { x: node.x(), y: node.y() })
+          }}
+          onTransformEnd={(e) => {
+            const node = e.target
+            updateCaptionState('mainCaption', {
+              x: node.x(),
+              y: node.y(),
+              scaleX: node.scaleX(),
+              scaleY: node.scaleY(),
+            })
+          }}
+        />
+      )}
+      {config.date.enabled !== false && (
+        <Text
+          ref={dateRef}
+          text={config.date.text}
+          x={config.date.x ?? 0}
+          y={Math.min(config.date.y ?? header.dateY, canvasHeight - 40)}
+          scaleX={config.date.scaleX || 1}
+          scaleY={config.date.scaleY || 1}
+          width={canvasWidth}
+          align="center"
+          fontSize={config.date.fontSize || 20}
+          fontFamily={config.date.fontFamily || 'Arial'}
+          fontStyle={config.date.fontStyle || 'normal'}
+          fill={config.date.fill || '#5A5A5A'}
+          draggable
+          onClick={() => selectShape('date')}
+          onTap={() => selectShape('date')}
+          onDragEnd={(e) => {
+            const node = e.target
+            updateCaptionState('date', { x: node.x(), y: node.y() })
+          }}
+          onTransformEnd={(e) => {
+            const node = e.target
+            updateCaptionState('date', {
+              x: node.x(),
+              y: node.y(),
+              scaleX: node.scaleX(),
+              scaleY: node.scaleY(),
+            })
+          }}
+        />
+      )}
+      {config.secondaryCaption.enabled !== false && (
+        <Text
+          ref={secondaryCaptionRef}
+          text={config.secondaryCaption.text}
+          x={config.secondaryCaption.x ?? 0}
+          y={Math.min(config.secondaryCaption.y ?? header.subY, canvasHeight - 40)}
+          scaleX={config.secondaryCaption.scaleX || 1}
+          scaleY={config.secondaryCaption.scaleY || 1}
+          width={canvasWidth}
+          align="center"
+          fontSize={config.secondaryCaption.fontSize || 30}
+          fontFamily={config.secondaryCaption.fontFamily || 'Arial'}
+          fontStyle={config.secondaryCaption.fontStyle || 'italic'}
+          fill={config.secondaryCaption.fill || '#2E2E2E'}
+          draggable
+          onClick={() => selectShape('secondaryCaption')}
+          onTap={() => selectShape('secondaryCaption')}
+          onDragEnd={(e) => {
+            const node = e.target
+            updateCaptionState('secondaryCaption', { x: node.x(), y: node.y() })
+          }}
+          onTransformEnd={(e) => {
+            const node = e.target
+            updateCaptionState('secondaryCaption', {
+              x: node.x(),
+              y: node.y(),
+              scaleX: node.scaleX(),
+              scaleY: node.scaleY(),
+            })
+          }}
+        />
+      )}
 
       {/* Avatars — always render every defined slot (placeholder circle if
           no image yet) so it's clear to the user where each role goes */}
@@ -516,143 +544,259 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape }) {
         const avatarScaleX = slot.scaleX ?? 1
         const avatarScaleY = slot.scaleY ?? 1
 
+        const circleX = (slot.circleX !== undefined && slot.circleX !== null) ? slot.circleX : 0
+        const circleY = (slot.circleY !== undefined && slot.circleY !== null) ? slot.circleY : 0
+        const shapeBottomY = slot.shape === 'oval' ? (slot.size * 0.9) : slot.size
+        const labelX = (slot.labelX !== undefined && slot.labelX !== null) ? slot.labelX : slot.size / 2
+        const labelY = (slot.labelY !== undefined && slot.labelY !== null) ? slot.labelY : (shapeBottomY + 8)
+
         return (
           <Group
             key={slot.id}
-            ref={(node) => {
-              if (node) {
-                avatarRefs.current[slot.id] = node
-              } else {
-                delete avatarRefs.current[slot.id]
-              }
-            }}
-            draggable
             x={avatarX}
             y={avatarY}
             scaleX={avatarScaleX}
             scaleY={avatarScaleY}
-            onClick={() => selectShape(slot.id)}
-            onTap={() => selectShape(slot.id)}
-            onDragEnd={(e) => {
-              const node = e.target
-              updateAvatarPosition(slot.category, slot.id, {
-                customX: node.x(),
-                customY: node.y(),
-              })
-            }}
-            onTransformEnd={(e) => {
-              const node = e.target
-              updateAvatarPosition(slot.category, slot.id, {
-                customX: node.x(),
-                customY: node.y(),
-                scaleX: node.scaleX(),
-                scaleY: node.scaleY(),
-              })
-            }}
           >
-            <AvatarNode
-              x={0}
-              y={0}
-              size={slot.size}
-              label={slot.label}
-              dataUrl={slot.dataUrl}
-              opacity={slot.opacity !== undefined ? slot.opacity : 100}
-              brightness={slot.brightness !== undefined ? slot.brightness : 0}
-              fontFamily={slot.fontFamily || 'Arial'}
-              fontSize={slot.fontSize || 16}
-              fill={slot.fill || '#2A2A2A'}
-              stroke={slot.stroke || '#000000'}
-              fillEnabled={slot.fillEnabled !== false}
-              shape={slot.shape || 'circle'}
-            />
+            {/* Draggable Circle Node */}
+            {slot.circleEnabled !== false && (
+              <Group
+                ref={(node) => {
+                  if (node) {
+                    avatarRefs.current[slot.id] = node
+                  } else {
+                    delete avatarRefs.current[slot.id]
+                  }
+                }}
+                x={circleX}
+                y={circleY}
+                scaleX={slot.circleScaleX ?? 1}
+                scaleY={slot.circleScaleY ?? 1}
+                draggable={croppingId !== slot.id}
+                onClick={() => selectShape(slot.id)}
+                onTap={() => selectShape(slot.id)}
+                onDblClick={() => {
+                  if (slot.dataUrl && setCroppingId) {
+                    setCroppingId(croppingId === slot.id ? null : slot.id)
+                  }
+                }}
+                onDblTap={() => {
+                  if (slot.dataUrl && setCroppingId) {
+                    setCroppingId(croppingId === slot.id ? null : slot.id)
+                  }
+                }}
+                onDragEnd={(e) => {
+                  const node = e.target
+                  updateAvatarPosition(slot.category, slot.id, {
+                    circleX: node.x(),
+                    circleY: node.y(),
+                  })
+                }}
+                onTransformEnd={(e) => {
+                  const node = e.target
+                  updateAvatarPosition(slot.category, slot.id, {
+                    circleX: node.x(),
+                    circleY: node.y(),
+                    circleScaleX: node.scaleX(),
+                    circleScaleY: node.scaleY(),
+                  })
+                }}
+              >
+                <AvatarNode
+                  x={0}
+                  y={0}
+                  size={slot.size}
+                  dataUrl={slot.dataUrl}
+                  opacity={slot.opacity !== undefined ? slot.opacity : 100}
+                  brightness={slot.brightness !== undefined ? slot.brightness : 0}
+                  stroke={slot.stroke || '#000000'}
+                  fillEnabled={slot.fillEnabled !== false}
+                  shape={slot.shape || 'circle'}
+                  photoX={slot.photoX !== undefined ? slot.photoX : 0}
+                  photoY={slot.photoY !== undefined ? slot.photoY : 0}
+                  isCropping={croppingId === slot.id}
+                  onPhotoDragEnd={(newPos) => {
+                    updateAvatarPosition(slot.category, slot.id, newPos)
+                  }}
+                />
+              </Group>
+            )}
+
+            {/* Draggable Label Node */}
+            {slot.labelEnabled !== false && slot.label && (
+              <Text
+                ref={(node) => {
+                  if (node) {
+                    avatarRefs.current[slot.id + '-label'] = node
+                  } else {
+                    delete avatarRefs.current[slot.id + '-label']
+                  }
+                }}
+                x={labelX}
+                y={labelY}
+                scaleX={slot.labelScaleX ?? 1}
+                scaleY={slot.labelScaleY ?? 1}
+                text={slot.label}
+                width={slot.size + 40}
+                offsetX={(slot.size + 40) / 2}
+                align="center"
+                fontSize={slot.fontSize || 16}
+                fontFamily={slot.fontFamily || 'Arial'}
+                fontStyle={slot.fontStyle || 'normal'}
+                fill={slot.fill || '#2A2A2A'}
+                draggable
+                onClick={() => selectShape(slot.id + '-label')}
+                onTap={() => selectShape(slot.id + '-label')}
+                onDragEnd={(e) => {
+                  const node = e.target
+                  updateAvatarPosition(slot.category, slot.id, {
+                    labelX: node.x(),
+                    labelY: node.y(),
+                  })
+                }}
+                onTransformEnd={(e) => {
+                  const node = e.target
+                  updateAvatarPosition(slot.category, slot.id, {
+                    labelX: node.x(),
+                    labelY: node.y(),
+                    labelScaleX: node.scaleX(),
+                    labelScaleY: node.scaleY(),
+                  })
+                }}
+              />
+            )}
           </Group>
         )
       })}
 
       {/* Promo message */}
-      <Text
-        ref={promoMessageRef}
-        text={config.promoMessage.text}
-        x={config.promoMessage.x ?? 40}
-        y={Math.min(config.promoMessage.y ?? promoY, canvasHeight - 40)}
-        scaleX={config.promoMessage.scaleX || 1}
-        scaleY={config.promoMessage.scaleY || 1}
-        width={canvasWidth - 80}
-        align="center"
-        fontSize={config.promoMessage.fontSize || 20}
-        fontFamily={config.promoMessage.fontFamily || 'Arial'}
-        fill={config.promoMessage.fill || '#444444'}
-        lineHeight={1.4}
-        draggable
-        onClick={() => selectShape('promoMessage')}
-        onTap={() => selectShape('promoMessage')}
-        onDragEnd={(e) => {
-          const node = e.target
-          updateCaptionState('promoMessage', { x: node.x(), y: node.y() })
-        }}
-        onTransformEnd={(e) => {
-          const node = e.target
-          updateCaptionState('promoMessage', {
-            x: node.x(),
-            y: node.y(),
-            scaleX: node.scaleX(),
-            scaleY: node.scaleY(),
-          })
-        }}
-      />
+      {config.promoMessage.enabled !== false && (
+        <Text
+          ref={promoMessageRef}
+          text={config.promoMessage.text}
+          x={config.promoMessage.x ?? 40}
+          y={Math.min(config.promoMessage.y ?? promoY, canvasHeight - 40)}
+          scaleX={config.promoMessage.scaleX || 1}
+          scaleY={config.promoMessage.scaleY || 1}
+          width={canvasWidth - 80}
+          align="center"
+          fontSize={config.promoMessage.fontSize || 20}
+          fontFamily={config.promoMessage.fontFamily || 'Arial'}
+          fontStyle={config.promoMessage.fontStyle || 'normal'}
+          fill={config.promoMessage.fill || '#444444'}
+          lineHeight={1.4}
+          draggable
+          onClick={() => selectShape('promoMessage')}
+          onTap={() => selectShape('promoMessage')}
+          onDragEnd={(e) => {
+            const node = e.target
+            updateCaptionState('promoMessage', { x: node.x(), y: node.y() })
+          }}
+          onTransformEnd={(e) => {
+            const node = e.target
+            updateCaptionState('promoMessage', {
+              x: node.x(),
+              y: node.y(),
+              scaleX: node.scaleX(),
+              scaleY: node.scaleY(),
+            })
+          }}
+        />
+      )}
 
       {/* Draggable Logo Group */}
-      <Group
-        ref={logoGroupRef}
-        draggable
-        x={logoX}
-        y={logoYCoord}
-        scaleX={logoScaleX}
-        scaleY={logoScaleY}
-        onClick={() => selectShape('logo')}
-        onTap={() => selectShape('logo')}
-        onDragEnd={(e) => {
-          const node = e.target
-          updateLogoState({
-            x: node.x(),
-            y: node.y(),
-          })
-        }}
-        onTransformEnd={(e) => {
-          const node = e.target
-          // Read scale values applied by Transformer
-          const scaleX = node.scaleX()
-          const scaleY = node.scaleY()
-          updateLogoState({
-            x: node.x(),
-            y: node.y(),
-            scaleX: scaleX,
-            scaleY: scaleY,
-          })
-        }}
-      >
-        {logoImage ? (
-          <KonvaImage
-            image={logoImage}
-            x={-logoSize / 2}
-            y={-logoSize / 2}
-            width={logoSize}
-            height={logoSize}
-          />
-        ) : (
-          <Text
-            text={config.logo.fallbackText || ''}
-            x={-150}
-            y={-12}
-            width={300}
-            align="center"
-            fontSize={18}
-            fontFamily="Inter, Arial, sans-serif"
-            fontStyle="600"
-            fill="#1A1A1A"
-          />
-        )}
-      </Group>
+      {config.logo.enabled !== false && (
+        <Group
+          ref={logoGroupRef}
+          draggable
+          x={logoX}
+          y={logoYCoord}
+          scaleX={logoScaleX}
+          scaleY={logoScaleY}
+          onClick={() => selectShape('logo')}
+          onTap={() => selectShape('logo')}
+          onDragEnd={(e) => {
+            const node = e.target
+            updateLogoState({
+              x: node.x(),
+              y: node.y(),
+            })
+          }}
+          onTransformEnd={(e) => {
+            const node = e.target
+            // Read scale values applied by Transformer
+            const scaleX = node.scaleX()
+            const scaleY = node.scaleY()
+            updateLogoState({
+              x: node.x(),
+              y: node.y(),
+              scaleX: scaleX,
+              scaleY: scaleY,
+            })
+          }}
+        >
+          {logoImage ? (
+            <KonvaImage
+              image={logoImage}
+              x={-logoSize / 2}
+              y={-logoSize / 2}
+              width={logoSize}
+              height={logoSize}
+            />
+          ) : (
+            <Text
+              text="Your Logo"
+              x={-150}
+              y={-12}
+              width={300}
+              align="center"
+              fontSize={18}
+              fontFamily="Inter, Arial, sans-serif"
+              fontStyle="600"
+              fill="#1A1A1A"
+              opacity={0.4}
+            />
+          )}
+        </Group>
+      )}
+
+      {/* Draggable Motto Text */}
+      {config.motto.enabled !== false && (
+        <Text
+          ref={mottoRef}
+          text={config.motto.text}
+          x={mottoX}
+          y={mottoYCoord}
+          scaleX={config.motto.scaleX ?? 1}
+          scaleY={config.motto.scaleY ?? 1}
+          fontSize={config.motto.fontSize ?? 18}
+          fontFamily={config.motto.fontFamily ?? 'Arial'}
+          fontStyle={config.motto.fontStyle ?? 'normal'}
+          fill={config.motto.fill ?? '#1A1A1A'}
+          align="center"
+          offsetX={150}
+          width={300}
+          draggable
+          onClick={() => selectShape('motto')}
+          onTap={() => selectShape('motto')}
+          onDragEnd={(e) => {
+            const node = e.target
+            updateCaptionState('motto', {
+              x: node.x(),
+              y: node.y(),
+            })
+          }}
+          onTransformEnd={(e) => {
+            const node = e.target
+            updateCaptionState('motto', {
+              x: node.x(),
+              y: node.y(),
+              scaleX: node.scaleX(),
+              scaleY: node.scaleY(),
+            })
+          }}
+        />
+      )}
 
       {/* Attach Transformer conditionally */}
       {selectedId && (
