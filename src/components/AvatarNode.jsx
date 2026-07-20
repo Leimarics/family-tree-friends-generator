@@ -12,7 +12,7 @@ import Konva from 'konva'
  * so we clip a Group instead -- that's the reliable way to get custom avatar
  * shapes that still export cleanly to PNG/JPEG.
  */
-export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, brightness = 0, fontFamily = 'Arial', fontSize = 16, fill = '#2A2A2A', stroke = '#000000', fillEnabled = true, shape = 'circle' }) {
+export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, brightness = 0, fontFamily = 'Arial', fontSize = 16, fill = '#2A2A2A', fontStyle = 'normal', stroke = '#000000', fillEnabled = true, shape = 'circle', photoX = 0, photoY = 0, isCropping = false, onPhotoDragEnd }) {
   const [image] = useImage(dataUrl || undefined, 'anonymous')
   const imgRef = useRef(null)
 
@@ -37,7 +37,7 @@ export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, 
       imgRef.current.cache()
       imgRef.current.getLayer()?.batchDraw()
     }
-  }, [image, opacity, brightness])
+  }, [image, opacity, brightness, photoX, photoY])
 
   const clipFunc = (ctx) => {
     if (shape === 'square') {
@@ -127,6 +127,64 @@ export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, 
   }
 
   const renderBorderRing = () => {
+    if (isCropping) {
+      if (shape === 'square') {
+        return (
+          <Rect
+            x={0}
+            y={0}
+            width={size}
+            height={size}
+            stroke="#3D7BFF"
+            strokeWidth={3}
+            dash={[4, 4]}
+            listening={false}
+          />
+        )
+      }
+      if (shape === 'rounded') {
+        const r = Math.max(4, size * 0.125)
+        return (
+          <Rect
+            x={0}
+            y={0}
+            width={size}
+            height={size}
+            cornerRadius={r}
+            stroke="#3D7BFF"
+            strokeWidth={3}
+            dash={[4, 4]}
+            listening={false}
+          />
+        )
+      }
+      if (shape === 'oval') {
+        return (
+          <Ellipse
+            x={size / 2}
+            y={size / 2}
+            radiusX={size / 2}
+            radiusY={size / 2.5}
+            stroke="#3D7BFF"
+            strokeWidth={3}
+            dash={[4, 4]}
+            listening={false}
+          />
+        )
+      }
+      return (
+        <Circle
+          x={size / 2}
+          y={size / 2}
+          radius={size / 2}
+          stroke="#3D7BFF"
+          strokeWidth={3}
+          dash={[4, 4]}
+          listening={false}
+        />
+      )
+    }
+
     const ringStroke = stroke
     const ringStrokeWidth = fillEnabled ? Math.max(3, size * 0.025) : 2
 
@@ -206,11 +264,26 @@ export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, 
             ref={imgRef}
             image={image}
             crop={crop}
+            x={photoX}
+            y={photoY}
             width={size}
             height={size}
             opacity={opacity / 100}
             filters={brightness !== 0 ? [Konva.Filters.Brighten] : []}
             brightness={brightness / 100}
+            draggable={isCropping}
+            onDragStart={(e) => {
+              e.cancelBubble = true
+            }}
+            onDragEnd={(e) => {
+              e.cancelBubble = true
+              if (onPhotoDragEnd) {
+                onPhotoDragEnd({
+                  photoX: e.target.x(),
+                  photoY: e.target.y(),
+                })
+              }
+            }}
           />
         </Group>
       ) : (
@@ -228,6 +301,7 @@ export default function AvatarNode({ x, y, size, label, dataUrl, opacity = 100, 
           align="center"
           fontSize={fontSize}
           fontFamily={fontFamily}
+          fontStyle={fontStyle}
           fill={fill || '#2A2A2A'}
         />
       ) : null}
