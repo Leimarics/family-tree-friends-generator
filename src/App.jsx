@@ -4,7 +4,7 @@ import CanvasPreview from './components/CanvasPreview'
 import { defaultFamily, defaultFriends } from './utils/gridLayouts'
 import { Menu, X } from 'lucide-react'
 
-function migrateTextProp(val, defaultText, defaultFontFamily, defaultFontSize, defaultFill) {
+function migrateTextProp(val, defaultText, defaultFontFamily, defaultFontSize, defaultFill, defaultFontStyle = 'normal') {
   if (!val) {
     return {
       text: defaultText,
@@ -15,6 +15,8 @@ function migrateTextProp(val, defaultText, defaultFontFamily, defaultFontSize, d
       fontFamily: defaultFontFamily,
       fontSize: defaultFontSize,
       fill: defaultFill,
+      fontStyle: defaultFontStyle,
+      enabled: true,
     }
   }
   if (typeof val === 'string') {
@@ -27,6 +29,8 @@ function migrateTextProp(val, defaultText, defaultFontFamily, defaultFontSize, d
       fontFamily: defaultFontFamily,
       fontSize: defaultFontSize,
       fill: defaultFill,
+      fontStyle: defaultFontStyle,
+      enabled: true,
     }
   }
   // Reset legacy hardcoded defaults to undefined so they compute dynamically
@@ -41,6 +45,8 @@ function migrateTextProp(val, defaultText, defaultFontFamily, defaultFontSize, d
     fontFamily: val.fontFamily !== undefined ? val.fontFamily : defaultFontFamily,
     fontSize: val.fontSize !== undefined ? val.fontSize : defaultFontSize,
     fill: val.fill !== undefined ? val.fill : defaultFill,
+    fontStyle: val.fontStyle !== undefined ? val.fontStyle : defaultFontStyle,
+    enabled: val.enabled !== undefined ? val.enabled : true,
   }
 }
 
@@ -49,18 +55,16 @@ function initialConfig() {
     template: 'family', // 'family' | 'friends'
     orientation: 'portrait', // 'portrait' | 'landscape'
 
-    mainCaption: { text: 'Trip to Goa', x: undefined, y: undefined, scaleX: 1, scaleY: 1, fontFamily: 'Arial', fontSize: 40, fill: '#1A1A1A' },
-    date: { text: 'June 2026', x: undefined, y: undefined, scaleX: 1, scaleY: 1, fontFamily: 'Arial', fontSize: 20, fill: '#5A5A5A' },
-    secondaryCaption: { text: 'The Solanki Family', x: undefined, y: undefined, scaleX: 1, scaleY: 1, fontFamily: 'Arial', fontSize: 30, fill: '#2E2E2E' },
-    promoMessage: { text: 'Created with love.\nMaking memories last forever.', x: undefined, y: undefined, scaleX: 1, scaleY: 1, fontFamily: 'Arial', fontSize: 20, fill: '#444444' },
+    mainCaption: { text: 'Trip to Goa', x: undefined, y: undefined, scaleX: 1, scaleY: 1, fontFamily: 'Arial', fontSize: 40, fill: '#1A1A1A', fontStyle: 'bold', enabled: true },
+    date: { text: 'June 2026', x: undefined, y: undefined, scaleX: 1, scaleY: 1, fontFamily: 'Arial', fontSize: 20, fill: '#5A5A5A', fontStyle: 'normal', enabled: true },
+    secondaryCaption: { text: 'The Solanki Family', x: undefined, y: undefined, scaleX: 1, scaleY: 1, fontFamily: 'Arial', fontSize: 30, fill: '#2E2E2E', fontStyle: 'italic', enabled: true },
+    promoMessage: { text: 'Created with love.\nMaking memories last forever.', x: undefined, y: undefined, scaleX: 1, scaleY: 1, fontFamily: 'Arial', fontSize: 20, fill: '#444444', fontStyle: 'normal', enabled: true },
 
     background: {
       dataUrl: null,
       opacity: 1,
       brightness: 0,
     },
-
-
 
     frame: {
       enabled: false,
@@ -70,11 +74,24 @@ function initialConfig() {
 
     logo: {
       dataUrl: null,
-      fallbackText: 'Your Logo Here',
       x: undefined,
       y: undefined,
       scaleX: 1,
       scaleY: 1,
+      enabled: true,
+    },
+
+    motto: {
+      text: 'Your Motto Here',
+      x: undefined,
+      y: undefined,
+      scaleX: 1,
+      scaleY: 1,
+      fontFamily: 'Arial',
+      fontSize: 18,
+      fill: '#1A1A1A',
+      fontStyle: 'normal',
+      enabled: true,
     },
 
     family: defaultFamily(),
@@ -94,6 +111,7 @@ export default function App() {
   const [exportFormat, setExportFormat] = useState('png')
   const [isExporting, setIsExporting] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
+  const [croppingId, setCroppingId] = useState(null)
 
   const handleExport = () => {
     setIsExporting(true)
@@ -106,8 +124,10 @@ export default function App() {
         quality: 0.95,
       })
       const link = document.createElement('a')
-      const safeName = ((config.secondaryCaption?.text || config.secondaryCaption) || config.template || 'poster').replace(/[^a-z0-9]+/gi, '-')
-      link.download = `${safeName}-${Date.now()}.${exportFormat === 'jpeg' ? 'jpg' : 'png'}`
+      const fileName = (config.mainCaption?.text || config.secondaryCaption?.text || 'poster')
+        .replace(/[^a-z0-9]/gi, '_')
+        .toLowerCase() + '.' + (exportFormat === 'jpeg' ? 'jpg' : 'png')
+      link.download = fileName
       link.href = uri
       document.body.appendChild(link)
       link.click()
@@ -154,22 +174,32 @@ export default function App() {
       const activeY = isOldDefault ? undefined : logoVal.y
       return {
         ...parsed,
-        mainCaption: migrateTextProp(parsed.mainCaption, 'Trip to Goa', 'Arial', 40, '#1A1A1A'),
-        date: migrateTextProp(parsed.date, 'June 2026', 'Arial', 20, '#5A5A5A'),
-        secondaryCaption: migrateTextProp(parsed.secondaryCaption, 'The Solanki Family', 'Arial', 30, '#2E2E2E'),
-        promoMessage: migrateTextProp(parsed.promoMessage, 'Created with love.\nMaking memories last forever.', 'Arial', 20, '#444444'),
+        mainCaption: migrateTextProp(parsed.mainCaption, 'Trip to Goa', 'Arial', 40, '#1A1A1A', 'bold'),
+        date: migrateTextProp(parsed.date, 'June 2026', 'Arial', 20, '#5A5A5A', 'normal'),
+        secondaryCaption: migrateTextProp(parsed.secondaryCaption, 'The Solanki Family', 'Arial', 30, '#2E2E2E', 'italic'),
+        promoMessage: migrateTextProp(parsed.promoMessage, 'Created with love.\nMaking memories last forever.', 'Arial', 20, '#444444', 'normal'),
         background: {
           ...(parsed.background || {}),
           dataUrl: bgVal !== null ? bgVal : (parsed.background?.dataUrl || null),
         },
         logo: {
           dataUrl: logoVal.dataUrl !== undefined ? logoVal.dataUrl : null,
-          fallbackText: logoVal.fallbackText !== undefined ? logoVal.fallbackText : 'Your Logo Here',
           x: activeX !== undefined ? activeX : undefined,
           y: activeY !== undefined ? activeY : undefined,
           scaleX: logoVal.scaleX !== undefined ? logoVal.scaleX : 1,
           scaleY: logoVal.scaleY !== undefined ? logoVal.scaleY : 1,
+          enabled: logoVal.enabled !== undefined ? logoVal.enabled : true,
         },
+        motto: (() => {
+          const rawMotto = parsed.motto !== undefined
+            ? parsed.motto
+            : (logoVal.fallbackText !== undefined ? logoVal.fallbackText : 'Your Motto Here')
+          const migrated = migrateTextProp(rawMotto, 'Your Motto Here', 'Arial', 18, '#1A1A1A', 'normal')
+          if (parsed.motto === undefined && logoVal.mottoEnabled !== undefined) {
+            migrated.enabled = logoVal.mottoEnabled
+          }
+          return migrated
+        })(),
         family: (() => {
           const rawFamily = avatarsVal ? avatarsVal.family : (parsed.family || defaultFamily())
           const cleanFamily = {}
@@ -183,6 +213,19 @@ export default function App() {
               fill: slot.fill !== undefined ? slot.fill : '#2A2A2A',
               stroke: slot.stroke !== undefined ? slot.stroke : '#000000',
               fillEnabled: slot.fillEnabled !== undefined ? slot.fillEnabled : true,
+              fontStyle: slot.fontStyle !== undefined ? slot.fontStyle : 'normal',
+              photoX: slot.photoX !== undefined ? slot.photoX : 0,
+              photoY: slot.photoY !== undefined ? slot.photoY : 0,
+              circleEnabled: slot.circleEnabled !== undefined ? slot.circleEnabled : true,
+              labelEnabled: slot.labelEnabled !== undefined ? slot.labelEnabled : true,
+              circleX: slot.circleX === 0 ? undefined : slot.circleX,
+              circleY: slot.circleY === 0 ? undefined : slot.circleY,
+              labelX: slot.labelX === 0 ? undefined : slot.labelX,
+              labelY: slot.labelY === 0 ? undefined : slot.labelY,
+              circleScaleX: slot.circleScaleX !== undefined ? slot.circleScaleX : 1,
+              circleScaleY: slot.circleScaleY !== undefined ? slot.circleScaleY : 1,
+              labelScaleX: slot.labelScaleX !== undefined ? slot.labelScaleX : 1,
+              labelScaleY: slot.labelScaleY !== undefined ? slot.labelScaleY : 1,
             }))
           }
           return cleanFamily
@@ -200,6 +243,19 @@ export default function App() {
               fill: slot.fill !== undefined ? slot.fill : '#2A2A2A',
               stroke: slot.stroke !== undefined ? slot.stroke : '#000000',
               fillEnabled: slot.fillEnabled !== undefined ? slot.fillEnabled : true,
+              fontStyle: slot.fontStyle !== undefined ? slot.fontStyle : 'normal',
+              photoX: slot.photoX !== undefined ? slot.photoX : 0,
+              photoY: slot.photoY !== undefined ? slot.photoY : 0,
+              circleEnabled: slot.circleEnabled !== undefined ? slot.circleEnabled : true,
+              labelEnabled: slot.labelEnabled !== undefined ? slot.labelEnabled : true,
+              circleX: slot.circleX === 0 ? undefined : slot.circleX,
+              circleY: slot.circleY === 0 ? undefined : slot.circleY,
+              labelX: slot.labelX === 0 ? undefined : slot.labelX,
+              labelY: slot.labelY === 0 ? undefined : slot.labelY,
+              circleScaleX: slot.circleScaleX !== undefined ? slot.circleScaleX : 1,
+              circleScaleY: slot.circleScaleY !== undefined ? slot.circleScaleY : 1,
+              labelScaleX: slot.labelScaleX !== undefined ? slot.labelScaleX : 1,
+              labelScaleY: slot.labelScaleY !== undefined ? slot.labelScaleY : 1,
             }))
           }
         })(),
@@ -275,6 +331,8 @@ export default function App() {
           handleExport={handleExport}
           selectedId={selectedId}
           setSelectedId={setSelectedId}
+          croppingId={croppingId}
+          setCroppingId={setCroppingId}
         />
       </div>
 
@@ -290,7 +348,15 @@ export default function App() {
         </button>
 
         <div className="flex-1 h-full pt-10 md:pt-12">
-          <CanvasPreview config={config} setConfig={setConfig} stageRef={stageRef} selectedId={selectedId} selectShape={setSelectedId} />
+          <CanvasPreview
+            config={config}
+            setConfig={setConfig}
+            stageRef={stageRef}
+            selectedId={selectedId}
+            selectShape={setSelectedId}
+            croppingId={croppingId}
+            setCroppingId={setCroppingId}
+          />
         </div>
       </div>
     </div>
