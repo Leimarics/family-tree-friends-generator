@@ -3,10 +3,27 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "description": "Family Tree Generator Desktop Application",
+  "author": "Leimarics",
+  "main": "main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:app": "vite build && electron-builder -c.mac.identity=null",
     "preview": "vite preview"
+  },
+  "build": {
+    "appId": "com.leimarics.postergenerator",
+    "productName": "Family Tree Generator",
+    "directories": {
+      "output": "release-builds"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    }
   },
   "dependencies": {
     "konva": "^9.3.14",
@@ -19,6 +36,8 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
     "vite": "^5.3.1"
