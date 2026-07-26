@@ -303,7 +303,7 @@ export default function App() {
   }, [avatars])
 
   return (
-    <div className="flex h-screen w-full bg-ink overflow-hidden relative">
+    <div className="flex h-[100dvh] w-full bg-ink overflow-hidden relative">
       {/* Mobile backdrop */}
       {isSidebarOpen && (
         <div
@@ -337,7 +337,7 @@ export default function App() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 h-full p-3 md:p-6 relative overflow-hidden flex flex-col transition-all duration-300">
+      <div className="flex-1 h-full min-h-0 p-3 md:p-6 relative overflow-hidden flex flex-col transition-all duration-300">
         {/* Floating toggle button */}
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -347,7 +347,7 @@ export default function App() {
           {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
 
-        <div className="flex-1 h-full pt-10 md:pt-12">
+        <div className="flex-1 h-full min-h-0 pt-10 md:pt-12 overflow-hidden flex flex-col">
           <CanvasPreview
             config={config}
             setConfig={setConfig}
