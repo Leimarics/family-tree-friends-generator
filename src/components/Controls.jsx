@@ -95,14 +95,14 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
 
   return (
     <div className="flex flex-col gap-7">
-      <div>
-        <div className="flex items-baseline gap-2">
+      <div className="pr-12 md:pr-0">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <h1 className="text-xl font-semibold text-white">Poster Generator</h1>
           <a
             href="https://www.leimarics.com/"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-gray-400 hover:text-white transition-colors font-medium"
+            className="text-sm text-gray-400 hover:text-white transition-colors font-medium shrink-0"
           >
             by Leimarics
           </a>
@@ -221,20 +221,38 @@ export default function Controls({ config, setConfig, exportFormat, setExportFor
         </button>
         <button
           onClick={() => {
+            const resetSlot = (a) => ({
+              ...a,
+              customX: undefined,
+              customY: undefined,
+              scaleX: undefined,
+              scaleY: undefined,
+              circleX: undefined,
+              circleY: undefined,
+              labelX: undefined,
+              labelY: undefined,
+              photoX: 0,
+              photoY: 0,
+              circleScaleX: 1,
+              circleScaleY: 1,
+              labelScaleX: 1,
+              labelScaleY: 1,
+            })
             update({
               mainCaption: { ...config.mainCaption, x: undefined, y: undefined, scaleX: undefined, scaleY: undefined },
               date: { ...config.date, x: undefined, y: undefined, scaleX: undefined, scaleY: undefined },
               secondaryCaption: { ...config.secondaryCaption, x: undefined, y: undefined, scaleX: undefined, scaleY: undefined },
               promoMessage: { ...config.promoMessage, x: undefined, y: undefined, scaleX: undefined, scaleY: undefined },
               logo: { ...config.logo, x: undefined, y: undefined, scaleX: undefined, scaleY: undefined },
+              motto: { ...config.motto, x: undefined, y: undefined, scaleX: undefined, scaleY: undefined },
               family: {
-                parents: config.family.parents.map(a => ({ ...a, customX: undefined, customY: undefined, scaleX: undefined, scaleY: undefined })),
-                relatives: config.family.relatives.map(a => ({ ...a, customX: undefined, customY: undefined, scaleX: undefined, scaleY: undefined })),
-                children: config.family.children.map(a => ({ ...a, customX: undefined, customY: undefined, scaleX: undefined, scaleY: undefined })),
+                parents: (config.family?.parents || []).map(resetSlot),
+                relatives: (config.family?.relatives || []).map(resetSlot),
+                children: (config.family?.children || []).map(resetSlot),
               },
               friends: {
                 ...config.friends,
-                list: config.friends.list.map(a => ({ ...a, customX: undefined, customY: undefined, scaleX: undefined, scaleY: undefined })),
+                list: (config.friends?.list || []).map(resetSlot),
               }
             })
           }}
