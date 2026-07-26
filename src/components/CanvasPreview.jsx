@@ -214,6 +214,7 @@ export default function CanvasPreview({ config, setConfig, stageRef, selectedId,
               width={canvasWidth}
               height={canvasHeight}
               ref={stageRef}
+              draggable={true}
               onMouseDown={checkDeselect}
               onTouchStart={checkDeselect}
               onDblClick={handleStageDblClick}
@@ -227,6 +228,7 @@ export default function CanvasPreview({ config, setConfig, stageRef, selectedId,
                 selectShape={handleSelectShape}
                 croppingId={croppingId}
                 setCroppingId={setCroppingId}
+                scale={scale}
               />
             </Stage>
           </div>
@@ -291,7 +293,7 @@ export default function CanvasPreview({ config, setConfig, stageRef, selectedId,
   )
 }
 
-function PosterLayer({ config, setConfig, layout, selectedId, selectShape, croppingId, setCroppingId }) {
+function PosterLayer({ config, setConfig, layout, selectedId, selectShape, croppingId, setCroppingId, scale = 1 }) {
   const { canvasWidth, canvasHeight, header, avatarSlots, promoY, promoSize, logoY, logoSize } = layout
   const [bgImage] = useImage(config.background.dataUrl || undefined, 'anonymous')
   const [logoImage] = useImage(config.logo.dataUrl || undefined, 'anonymous')
@@ -442,6 +444,8 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
   const mottoYCoord = config.motto.y !== undefined
     ? config.motto.y
     : logoYCoord + (logoImage ? logoSize / 2 + 15 : 30)
+
+  const dynamicTouchTolerance = Math.max(40, 40 / (scale || 1))
 
   return (
     <Layer>
@@ -839,9 +843,9 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
       {selectedId && (
         <Transformer
           ref={transformerRef}
-          anchorSize={18}
-          anchorCornerRadius={4}
-          touchAnchorTolerance={40}
+          anchorSize={14}
+          anchorCornerRadius={7}
+          touchAnchorTolerance={dynamicTouchTolerance}
           enabledAnchors={[
             'top-left',
             'top-center',
