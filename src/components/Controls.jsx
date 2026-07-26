@@ -828,13 +828,13 @@ function AvatarSlotRow({
   const brightnessVal = slot.brightness ?? 0
 
   return (
-    <div className="flex flex-col gap-2.5 bg-panel2 border border-line rounded-md p-3">
+    <div className="flex flex-col gap-2.5 bg-panel2 border border-line rounded-md p-3 min-w-0 w-full">
       {/* Top Header Row with Slot Delete */}
-      <div className="flex items-center justify-between text-xs text-gray-500 font-semibold border-b border-line pb-1.5 mb-0.5">
+      <div className="flex items-center justify-between text-xs text-gray-500 font-semibold border-b border-line pb-1.5 mb-0.5 min-w-0">
         <span>Slot #{index + 1}</span>
         <button
           onClick={onRemove}
-          className="text-gray-500 hover:text-red-400 flex items-center gap-1 transition-colors"
+          className="text-gray-500 hover:text-red-400 flex items-center gap-1 transition-colors shrink-0"
           title="Delete entire slot"
         >
           <Trash2 size={13} /> Delete Slot
@@ -843,9 +843,9 @@ function AvatarSlotRow({
 
       {/* Circle / Image Upload Section */}
       {slot.circleEnabled !== false ? (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 min-w-0">
           <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Photo / Circle</span>
-          <div className="flex gap-2 items-center w-full">
+          <div className="flex gap-2 items-center w-full min-w-0">
             <button
               onClick={() => inputRef.current?.click()}
               className="w-11 h-11 rounded-full border border-line flex items-center justify-center overflow-hidden shrink-0 bg-[#1A1D24]"
@@ -899,48 +899,52 @@ function AvatarSlotRow({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 pl-[52px] mt-1">
+          <div className="flex items-center gap-2 pl-[52px] mt-1 min-w-0 w-full">
             <span className="text-xs text-gray-500 shrink-0">Shape:</span>
-            <select
-              value={slot.shape || 'circle'}
-              onChange={(e) => onShapeChange(e.target.value)}
-              className="bg-[#1F2430] border border-line rounded px-2 py-0.5 text-xs text-gray-300 focus:outline-none focus:border-accent flex-1"
-            >
-              <option value="circle">Circle</option>
-              <option value="square">Square</option>
-              <option value="rounded">Rounded Square</option>
-              <option value="oval">Oval</option>
-            </select>
+            <div className="min-w-0 flex-1">
+              <select
+                value={slot.shape || 'circle'}
+                onChange={(e) => onShapeChange(e.target.value)}
+                className="bg-[#1F2430] border border-line rounded px-2 py-0.5 text-xs text-gray-300 focus:outline-none focus:border-accent w-full text-ellipsis overflow-hidden"
+              >
+                <option value="circle">Circle</option>
+                <option value="square">Square</option>
+                <option value="rounded">Rounded Square</option>
+                <option value="oval">Oval</option>
+              </select>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 pl-[52px]">
+          <div className="flex items-center gap-2 pl-[52px] min-w-0 w-full">
             <span className="text-xs text-gray-500 shrink-0">Style:</span>
-            <select
-              value={slot.fillEnabled !== false ? 'solid' : 'outline'}
-              onChange={(e) => onFillEnabledChange(e.target.value === 'solid')}
-              className="bg-[#1F2430] border border-line rounded px-2 py-0.5 text-xs text-gray-300 focus:outline-none focus:border-accent flex-1"
-            >
-              <option value="solid">Solid</option>
-              <option value="outline">Outline</option>
-            </select>
+            <div className="min-w-0 flex-1">
+              <select
+                value={slot.fillEnabled !== false ? 'solid' : 'outline'}
+                onChange={(e) => onFillEnabledChange(e.target.value === 'solid')}
+                className="bg-[#1F2430] border border-line rounded px-2 py-0.5 text-xs text-gray-300 focus:outline-none focus:border-accent w-full text-ellipsis overflow-hidden"
+              >
+                <option value="solid">Solid</option>
+                <option value="outline">Outline</option>
+              </select>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 pl-[52px]">
+          <div className="flex items-center gap-2 pl-[52px] min-w-0 w-full">
             <span className="text-xs text-gray-500 shrink-0">Border:</span>
-            <div className="flex items-center gap-2 flex-1">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
               <input
                 type="color"
                 value={normalizeHexColor(slot.stroke || '#000000')}
                 onChange={(e) => onStrokeChange(e.target.value)}
-                className="h-6 flex-1 rounded border border-line bg-[#1F2430] cursor-pointer"
+                className="h-6 flex-1 min-w-0 rounded border border-line bg-[#1F2430] cursor-pointer"
               />
-              <span className="text-[10px] text-gray-400 font-mono uppercase">
+              <span className="text-[10px] text-gray-400 font-mono uppercase shrink-0">
                 {slot.stroke || '#000000'}
               </span>
             </div>
           </div>
 
-          <div className="pl-[52px] mt-0.5">
+          <div className="pl-[52px] mt-0.5 min-w-0 w-full">
             <div className="flex justify-between text-xs text-gray-400 mb-1">
               <span>Opacity</span>
               <span>{opacityVal}%</span>
@@ -956,7 +960,7 @@ function AvatarSlotRow({
             />
           </div>
 
-          <div className="pl-[52px] mt-0.5">
+          <div className="pl-[52px] mt-0.5 min-w-0 w-full">
             <div className="flex justify-between text-xs text-gray-400 mb-1">
               <span>Brightness</span>
               <span>{brightnessVal}</span>
@@ -973,14 +977,14 @@ function AvatarSlotRow({
           </div>
 
           {slot.dataUrl && (
-            <div className="flex items-center gap-2 pl-[52px] mt-1">
+            <div className="flex items-center gap-2 pl-[52px] mt-1 min-w-0 w-full">
               <button
                 onClick={() => {
                   if (setCroppingId) {
                     setCroppingId(croppingId === slot.id ? null : slot.id)
                   }
                 }}
-                className={`flex-1 py-1.5 px-3 border border-line rounded text-xs font-semibold transition-all flex items-center justify-center gap-1.5
+                className={`flex-1 py-1.5 px-3 border border-line rounded text-xs font-semibold transition-all flex items-center justify-center gap-1.5 min-w-0
                   ${croppingId === slot.id
                     ? 'bg-accent text-white border-accent shadow-md shadow-accent/20'
                     : 'bg-panel border-line text-gray-300 hover:text-white hover:bg-[#202533]'

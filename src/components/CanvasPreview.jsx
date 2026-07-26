@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useLayoutEffect, useState, useRef } from 'react'
 import { Stage, Layer, Rect, Text, Image as KonvaImage, Group, Transformer } from 'react-konva'
 import useImage from 'use-image'
 import Konva from 'konva'
@@ -319,6 +319,23 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
     }
   }, [bgImage, config.background.brightness])
 
+  // Auto-center text captions around their X position by setting offsetX = width / 2
+  useLayoutEffect(() => {
+    const captionRefs = [
+      mainCaptionRef.current,
+      dateRef.current,
+      secondaryCaptionRef.current,
+      promoMessageRef.current,
+      mottoRef.current,
+      ...Object.values(avatarRefs.current),
+    ]
+    captionRefs.forEach((node) => {
+      if (node) {
+        node.offsetX(node.width() / 2)
+      }
+    })
+  })
+
   useEffect(() => {
     if (!transformerRef.current) return
 
@@ -453,13 +470,15 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
       {/* Header text block */}
       {config.mainCaption.enabled !== false && (
         <Text
-          ref={mainCaptionRef}
+          ref={(node) => {
+            mainCaptionRef.current = node
+            if (node) node.offsetX(node.width() / 2)
+          }}
           text={config.mainCaption.text}
-          x={config.mainCaption.x ?? 0}
+          x={config.mainCaption.x ?? (canvasWidth / 2)}
           y={Math.min(config.mainCaption.y ?? header.mainY, canvasHeight - 40)}
           scaleX={config.mainCaption.scaleX || 1}
           scaleY={config.mainCaption.scaleY || 1}
-          width={canvasWidth}
           align="center"
           fontSize={config.mainCaption.fontSize || 40}
           fontFamily={config.mainCaption.fontFamily || 'Arial'}
@@ -485,13 +504,15 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
       )}
       {config.date.enabled !== false && (
         <Text
-          ref={dateRef}
+          ref={(node) => {
+            dateRef.current = node
+            if (node) node.offsetX(node.width() / 2)
+          }}
           text={config.date.text}
-          x={config.date.x ?? 0}
+          x={config.date.x ?? (canvasWidth / 2)}
           y={Math.min(config.date.y ?? header.dateY, canvasHeight - 40)}
           scaleX={config.date.scaleX || 1}
           scaleY={config.date.scaleY || 1}
-          width={canvasWidth}
           align="center"
           fontSize={config.date.fontSize || 20}
           fontFamily={config.date.fontFamily || 'Arial'}
@@ -517,13 +538,15 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
       )}
       {config.secondaryCaption.enabled !== false && (
         <Text
-          ref={secondaryCaptionRef}
+          ref={(node) => {
+            secondaryCaptionRef.current = node
+            if (node) node.offsetX(node.width() / 2)
+          }}
           text={config.secondaryCaption.text}
-          x={config.secondaryCaption.x ?? 0}
+          x={config.secondaryCaption.x ?? (canvasWidth / 2)}
           y={Math.min(config.secondaryCaption.y ?? header.subY, canvasHeight - 40)}
           scaleX={config.secondaryCaption.scaleX || 1}
           scaleY={config.secondaryCaption.scaleY || 1}
-          width={canvasWidth}
           align="center"
           fontSize={config.secondaryCaption.fontSize || 30}
           fontFamily={config.secondaryCaption.fontFamily || 'Arial'}
@@ -643,6 +666,7 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
                 ref={(node) => {
                   if (node) {
                     avatarRefs.current[slot.id + '-label'] = node
+                    node.offsetX(node.width() / 2)
                   } else {
                     delete avatarRefs.current[slot.id + '-label']
                   }
@@ -652,8 +676,6 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
                 scaleX={slot.labelScaleX ?? 1}
                 scaleY={slot.labelScaleY ?? 1}
                 text={slot.label}
-                width={slot.size + 40}
-                offsetX={(slot.size + 40) / 2}
                 align="center"
                 fontSize={slot.fontSize || 16}
                 fontFamily={slot.fontFamily || 'Arial'}
@@ -671,6 +693,7 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
                 }}
                 onTransformEnd={(e) => {
                   const node = e.target
+                  node.offsetX(node.width() / 2)
                   updateAvatarPosition(slot.category, slot.id, {
                     labelX: node.x(),
                     labelY: node.y(),
@@ -687,13 +710,15 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
       {/* Promo message */}
       {config.promoMessage.enabled !== false && (
         <Text
-          ref={promoMessageRef}
+          ref={(node) => {
+            promoMessageRef.current = node
+            if (node) node.offsetX(node.width() / 2)
+          }}
           text={config.promoMessage.text}
-          x={config.promoMessage.x ?? 40}
+          x={config.promoMessage.x ?? (canvasWidth / 2)}
           y={Math.min(config.promoMessage.y ?? promoY, canvasHeight - 40)}
           scaleX={config.promoMessage.scaleX || 1}
           scaleY={config.promoMessage.scaleY || 1}
-          width={canvasWidth - 80}
           align="center"
           fontSize={config.promoMessage.fontSize || 20}
           fontFamily={config.promoMessage.fontFamily || 'Arial'}
@@ -760,10 +785,12 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
             />
           ) : (
             <Text
+              ref={(node) => {
+                if (node) node.offsetX(node.width() / 2)
+              }}
               text="Your Logo"
-              x={-150}
+              x={0}
               y={-12}
-              width={300}
               align="center"
               fontSize={18}
               fontFamily="Inter, Arial, sans-serif"
@@ -778,7 +805,10 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
       {/* Draggable Motto Text */}
       {config.motto.enabled !== false && (
         <Text
-          ref={mottoRef}
+          ref={(node) => {
+            mottoRef.current = node
+            if (node) node.offsetX(node.width() / 2)
+          }}
           text={config.motto.text}
           x={mottoX}
           y={mottoYCoord}
@@ -789,8 +819,6 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
           fontStyle={config.motto.fontStyle ?? 'normal'}
           fill={config.motto.fill ?? '#1A1A1A'}
           align="center"
-          offsetX={150}
-          width={300}
           draggable
           onClick={() => selectShape('motto')}
           onTap={() => selectShape('motto')}
@@ -819,7 +847,17 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
           ref={transformerRef}
           anchorSize={18}
           anchorCornerRadius={4}
-          touchAnchorTolerance={10}
+          touchAnchorTolerance={25}
+          enabledAnchors={[
+            'top-left',
+            'top-center',
+            'top-right',
+            'middle-right',
+            'bottom-right',
+            'bottom-center',
+            'bottom-left',
+            'middle-left',
+          ]}
           boundBoxFunc={(oldBox, newBox) => {
             // Limit minimum size
             if (Math.abs(newBox.width) < 10 || Math.abs(newBox.height) < 10) {
