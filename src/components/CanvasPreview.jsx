@@ -214,6 +214,7 @@ export default function CanvasPreview({ config, setConfig, stageRef, selectedId,
               width={canvasWidth}
               height={canvasHeight}
               ref={stageRef}
+              draggable={true}
               onMouseDown={checkDeselect}
               onTouchStart={checkDeselect}
               onDblClick={handleStageDblClick}
@@ -445,7 +446,6 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
     : logoYCoord + (logoImage ? logoSize / 2 + 15 : 30)
 
   const dynamicTouchTolerance = Math.max(40, 40 / (scale || 1))
-  const dynamicAnchorSize = Math.max(12, 18 / (scale || 1))
 
   return (
     <Layer>
@@ -843,8 +843,8 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
       {selectedId && (
         <Transformer
           ref={transformerRef}
-          anchorSize={dynamicAnchorSize}
-          anchorCornerRadius={4}
+          anchorSize={14}
+          anchorCornerRadius={7}
           touchAnchorTolerance={dynamicTouchTolerance}
           enabledAnchors={[
             'top-left',
