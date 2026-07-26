@@ -20,7 +20,22 @@ export default function CanvasPreview({ config, setConfig, stageRef, selectedId,
   }
 
   const checkDeselect = (e) => {
-    const clickedOnEmpty = e.target === e.target.getStage() || e.target.name() === 'background'
+    const target = e.target
+    const stage = target.getStage()
+
+    // Explicitly check if the user tapped any part of a Transformer handle or shape
+    const isTransformer =
+      target.getParent()?.className === 'Transformer' ||
+      target.className === 'Transformer' ||
+      (target.className === 'Rect' && target.getParent()?.className === 'Transformer') ||
+      (target.className === 'Circle' && target.getParent()?.className === 'Transformer') ||
+      target.name()?.includes('anchor')
+
+    if (isTransformer) {
+      return
+    }
+
+    const clickedOnEmpty = target === stage || target.name() === 'background'
     if (clickedOnEmpty) {
       handleSelectShape(null)
     }
@@ -802,6 +817,9 @@ function PosterLayer({ config, setConfig, layout, selectedId, selectShape, cropp
       {selectedId && (
         <Transformer
           ref={transformerRef}
+          anchorSize={18}
+          anchorCornerRadius={4}
+          touchAnchorTolerance={10}
           boundBoxFunc={(oldBox, newBox) => {
             // Limit minimum size
             if (Math.abs(newBox.width) < 10 || Math.abs(newBox.height) < 10) {
