@@ -16,6 +16,7 @@
     "appId": "com.leimarics.postergenerator",
     "productName": "Family Tree Generator",
     "directories": {
+      "buildResources": "build",
       "output": "release-builds"
     },
     "win": {
